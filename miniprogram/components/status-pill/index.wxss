@@ -1,0 +1,2 @@
+.pill { display: inline-flex; box-sizing: border-box; padding: 7rpx 14rpx; border-radius: 999rpx; font-size: 22rpx; }.neutral { color: #6B7280; background: #F3F4F6; }.primary { color: #007AFF; background: #EAF4FF; }.accent { color: #0E7490; background: #DDF9FD; }.danger { color: #FF3B30; background: #FFF0EF; }
+.warning { color: #9A5A00; background: #FFF5D6; }.success { color: #16834B; background: #E9F8F0; }

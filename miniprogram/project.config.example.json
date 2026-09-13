@@ -1,0 +1,13 @@
+{
+  "miniprogramRoot": "./",
+  "projectname": "family-kitchen",
+  "description": "Family Kitchen native WeChat Mini Program",
+  "appid": "wxYOUR_APP_ID",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "minified": true,
+    "urlCheck": true
+  },
+  "compileType": "miniprogram"
+}

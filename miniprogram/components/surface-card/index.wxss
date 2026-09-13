@@ -1,0 +1,1 @@
+.card { overflow: hidden; border: 1rpx solid rgba(15,23,42,.08); border-radius: 22rpx; background: #FFFFFF; }.padded { padding: 28rpx; }

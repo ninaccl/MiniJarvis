@@ -1,0 +1,4 @@
+{
+  "desc": "Family Kitchen Mini Program sitemap",
+  "rules": [{ "action": "allow", "page": "*" }]
+}

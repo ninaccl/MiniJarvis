@@ -1,0 +1,1 @@
+<view class="field"><view class="label">{{label}}</view><input class="input" value="{{value}}" placeholder="{{placeholder}}" maxlength="{{maxlength}}" bindinput="change" /></view>

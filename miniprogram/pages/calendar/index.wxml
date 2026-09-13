@@ -1,0 +1,17 @@
+<view class="page"><top-bar title="餐食日历" subtitle="安排家里的每一餐" avatar="{{avatar}}" bind:settings="openSettings"/>
+  <picker mode="date" value="{{date}}" bindchange="dateChange"><view class="date-button">{{date}}　选择日期 ▾</view></picker>
+  <state-panel wx:if="{{error && !sheet}}" type="error" title="操作失败" description="{{error}}" bind:retry="load"/>
+  <state-panel wx:if="{{loading}}" type="loading" title="正在加载安排"/>
+  <surface-card wx:for="{{sections}}" wx:key="code" wx:for-item="section"><view class="toolbar"><view class="card-title grow">{{section.name}}</view><button class="secondary-button" data-meal="{{section.code}}" bindtap="add">＋ 加菜</button></view><view wx:if="{{!section.entries.length}}" class="muted block">这餐还没有安排</view><view wx:for="{{section.entries}}" wx:key="id" class="list-row"><view class="grow"><button class="text-button" data-id="{{item.recipe_id}}" bindtap="detail">{{item.recipe_title}}</button><view class="muted">{{item.servings}} 人份</view></view><button class="secondary-button" data-entry="{{item}}" bindtap="edit">调整</button></view></surface-card>
+  <view wx:if="{{sheet}}" class="sheet-mask"><scroll-view scroll-y class="sheet"><view class="toolbar"><view class="card-title grow">{{sheet === 'picker' ? '选择菜谱与份数' : '调整餐食'}}</view><button class="text-button" bindtap="closeSheet">关闭</button></view><view wx:if="{{error}}" class="error-message">{{error}}</view>
+    <block wx:if="{{sheet === 'picker'}}"><view class="toolbar"><input class="search" placeholder="搜索菜谱" value="{{pickerQuery}}" data-field="pickerQuery" bindinput="input" bindconfirm="searchPicker"/><button class="secondary-button" bindtap="searchPicker">搜索</button></view>
+      <view wx:for="{{pickerItems}}" wx:key="id" class="list-row"><completion-checkbox class="grow" label="{{item.title}}" checked="{{item.checked}}" data-id="{{item.id}}" bind:change="toggleRecipe"/><input wx:if="{{item.checked}}" class="field quantity-input" type="digit" value="{{selected[item.id].servings}}" data-field="selected.{{item.id}}.servings" bindinput="input"/></view>
+      <view class="muted block">已选 {{selectedCount}} 道，搜索后选择仍保留；输入框为人份。</view>
+      <state-panel wx:if="{{pickerLoading}}" type="loading" title="正在搜索"/>
+      <view wx:if="{{!pickerLoading && !pickerItems.length}}" class="muted block">未找到菜谱，请先在菜谱页记录。</view>
+      <button wx:if="{{pickerMore}}" class="secondary-button block" loading="{{pickerLoading}}" bindtap="morePicker">加载更多</button>
+      <button class="primary-button block" loading="{{working}}" disabled="{{working || !selectedCount}}" bindtap="savePlan">一次添加 {{selectedCount}} 道菜</button>
+    </block>
+    <block wx:else><view class="card-title block">{{entry.recipe_title}}</view><view class="muted">人份</view><input class="field" type="digit" value="{{servings}}" data-field="servings" bindinput="input"/><button class="primary-button block" disabled="{{working}}" bindtap="saveEntry">保存份数</button><button class="danger-button block" disabled="{{working}}" bindtap="deleteEntry">移除这道菜</button></block>
+  </scroll-view></view>
+</view>

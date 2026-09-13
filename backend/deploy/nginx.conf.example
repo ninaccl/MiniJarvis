@@ -1,0 +1,31 @@
+server {
+    listen 80;
+    server_name kitchen-api.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name kitchen-api.example.com;
+    ssl_certificate /etc/letsencrypt/live/kitchen-api.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/kitchen-api.example.com/privkey.pem;
+    root /srv/jarvis/backend/public;
+    index index.php;
+    client_max_body_size 6m;
+
+    location / { try_files $uri /index.php$is_args$args; }
+    location ^~ /uploads/ {
+        # Uploaded images are static; never execute any file in this directory.
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff always;
+        expires 7d;
+    }
+    location = /index.php {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        fastcgi_param HTTP_AUTHORIZATION $http_authorization;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+    location ~ \.php$ { return 404; }
+    location ~ /\. { deny all; }
+}

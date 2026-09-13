@@ -1,0 +1,4 @@
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin: 6rpx 0 28rpx; }
+.title { color: #111827; font-size: 42rpx; font-weight: 700; letter-spacing: -.5rpx; }
+.subtitle { color: #6B7280; margin-top: 6rpx; font-size: 25rpx; }
+.avatar { width: 68rpx; height: 68rpx; min-width: 68rpx; padding: 0; border-radius: 50%; color: #007AFF; background: #EAF4FF; font-size: 28rpx; font-weight: 700; line-height: 68rpx; }

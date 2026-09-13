@@ -1,0 +1,32 @@
+<view class="page"><view class="screen-title">{{id ? '编辑菜谱' : '记录菜谱'}}</view>
+  <state-panel wx:if="{{loading}}" type="loading" title="正在加载"/>
+  <view wx:if="{{error}}" class="error-message">{{error}}</view>
+  <block wx:if="{{!loading}}">
+    <view class="section-label">基本信息</view><surface-card>
+      <image wx:if="{{cover}}" class="detail-cover" src="{{cover}}" mode="aspectFill"/><view class="toolbar"><button class="secondary-button grow" disabled="{{working}}" bindtap="chooseCover">{{cover ? '更换封面' : '选择一张封面'}}</button><button wx:if="{{cover}}" class="danger-button" bindtap="removeCover">移除</button></view>
+      <input class="field" placeholder="菜谱名称（必填）" maxlength="100" value="{{form.title}}" data-field="form.title" bindinput="input"/>
+      <picker range="{{categories}}" range-key="name" value="{{categoryIndex}}" bindchange="category"><view class="field">分类：{{categories[categoryIndex].name || '请选择'}}</view></picker>
+      <view class="muted">默认份数（1–100）</view><input class="field" type="digit" value="{{form.default_servings}}" data-field="form.default_servings" bindinput="input"/>
+      <textarea class="field textarea" placeholder="菜谱简介" maxlength="2000" value="{{form.description}}" data-field="form.description" bindinput="input"/>
+    </surface-card>
+    <view class="section-label">食材 · {{form.ingredients.length}} / 50</view>
+    <surface-card wx:for="{{form.ingredients}}" wx:key="index">
+      <input class="field" placeholder="食材名称" maxlength="120" value="{{item.name}}" data-field="form.ingredients[{{index}}].name" bindinput="input"/>
+      <view class="toolbar"><input class="field grow" type="digit" placeholder="留空为适量" value="{{item.quantity}}" data-field="form.ingredients[{{index}}].quantity" bindinput="input"/><picker range="{{units}}" range-key="name" data-index="{{index}}" bindchange="unit"><view class="field">{{item.unit_code || '单位'}} ▾</view></picker></view>
+      <input class="field" placeholder="备注（可选）" maxlength="255" value="{{item.note}}" data-field="form.ingredients[{{index}}].note" bindinput="input"/>
+      <button class="danger-button block" disabled="{{form.ingredients.length <= 1}}" data-index="{{index}}" bindtap="removeIngredient">移除食材</button>
+    </surface-card><button class="secondary-button block" disabled="{{form.ingredients.length >= 50}}" bindtap="addIngredient">＋ 添加食材</button>
+    <view class="section-label">做法</view><textarea class="field textarea tall" placeholder="按步骤记录做法" maxlength="10000" value="{{form.instructions}}" data-field="form.instructions" bindinput="input"/>
+    <view class="section-label">参考链接 · {{form.links.length}} / 5</view>
+    <surface-card wx:for="{{form.links}}" wx:key="index">
+      <input class="field" placeholder="HTTPS 链接" maxlength="2048" value="{{item.url}}" data-field="form.links[{{index}}].url" bindinput="input"/>
+      <picker range="{{platforms}}" data-index="{{index}}" bindchange="platform"><view class="field">来源：{{item.platform}} ▾</view></picker>
+      <input class="field" placeholder="小程序 AppID（可选）" maxlength="128" value="{{item.miniapp_app_id}}" data-field="form.links[{{index}}].miniapp_app_id" bindinput="input"/>
+      <input class="field" placeholder="小程序页面路径（可选）" maxlength="1024" value="{{item.miniapp_path}}" data-field="form.links[{{index}}].miniapp_path" bindinput="input"/>
+      <view class="toolbar"><button class="secondary-button grow" disabled="{{working}}" data-index="{{index}}" bindtap="previewLink">解析链接</button><button class="danger-button" data-index="{{index}}" bindtap="removeLink">移除</button></view>
+    </surface-card>
+    <surface-card wx:if="{{preview}}"><view class="card-title">{{preview.title}}</view><button class="secondary-button block" bindtap="adoptTitle">使用这个标题</button><button wx:if="{{preview.image_url}}" class="secondary-button block" disabled="{{working}}" bindtap="adoptCover">采用解析封面</button></surface-card>
+    <button class="secondary-button block" disabled="{{form.links.length >= 5}}" bindtap="addLink">＋ 添加链接</button>
+    <button class="primary-button block" loading="{{working}}" disabled="{{working}}" bindtap="save">保存菜谱</button>
+  </block>
+</view>

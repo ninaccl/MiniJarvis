@@ -1,0 +1,58 @@
+page {
+  min-height: 100%;
+  box-sizing: border-box;
+  background: #F5F5F7;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+button { margin: 0; border: 0; border-radius: 20rpx; font: inherit; }
+button::after { border: 0; }
+.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx 28rpx calc(44rpx + env(safe-area-inset-bottom)); }
+.screen-title { font-size: 42rpx; font-weight: 700; letter-spacing: -0.5rpx; }
+.muted { color: #6B7280; font-size: 28rpx; line-height: 1.55; }
+.primary-button { color: #FFFFFF; background: #007AFF; padding: 22rpx 28rpx; font-size: 30rpx; font-weight: 600; transition: opacity 180ms ease, transform 180ms ease; }
+.secondary-button { color: #007AFF; background: #EAF4FF; padding: 20rpx 28rpx; font-size: 28rpx; font-weight: 600; transition: opacity 180ms ease, transform 180ms ease; }
+.danger-button { color: #FF3B30; background: #FFF0EF; padding: 18rpx 24rpx; font-size: 26rpx; }
+button:active { opacity: .76; transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
+
+/* 88rpx = 44 CSS pixels on a 375px logical viewport. min-height keeps touch targets usable. */
+button, .field, .date-button, .pill { min-height: 88rpx; box-sizing: border-box; }
+.toolbar { display: flex; align-items: center; gap: 16rpx; }
+.grow { flex: 1; min-width: 0; }
+.block { margin-top: 24rpx; margin-bottom: 24rpx; }
+.search { flex: 1; min-width: 0; min-height: 88rpx; box-sizing: border-box; background: #FFFFFF; border-radius: 24rpx; padding: 20rpx 24rpx; font-size: 28rpx; }
+.pills { white-space: nowrap; margin: 20rpx 0; width: 100%; }
+.pill { display: inline-flex; align-items: center; justify-content: center; padding: 18rpx 26rpx; margin-right: 12rpx; border-radius: 999rpx; background: #FFFFFF; color: #6B7280; font-size: 28rpx; }
+.pill.selected { color: #007AFF; background: #EAF4FF; font-weight: 600; }
+.card-title { font-size: 32rpx; font-weight: 600; line-height: 1.45; }
+.section-label { margin: 32rpx 0 16rpx; font-size: 30rpx; font-weight: 600; }
+.field { display: block; width: 100%; padding: 22rpx 20rpx; margin: 14rpx 0; background: #F5F5F7; border: 1rpx solid #E5E7EB; border-radius: 18rpx; font-size: 28rpx; line-height: 1.5; }
+.field.grow { width: 0; }
+.textarea { height: 200rpx; }
+.textarea.tall { height: 360rpx; }
+.paragraph { white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 30rpx; }
+.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20rpx; }
+.recipe-card { overflow: hidden; border-radius: 28rpx; background: #FFFFFF; border: 1rpx solid #EBEDF0; }
+.cover { width: 100%; height: 230rpx; }
+.cover-empty { display: flex; justify-content: center; align-items: center; background: linear-gradient(145deg, #EAF4FF, #E9F8F0); color: #007AFF; font-size: 64rpx; }
+.card-body { padding: 20rpx; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-cover { width: 100%; height: 390rpx; border-radius: 28rpx; margin-bottom: 24rpx; }
+.link { text-align: left; word-break: break-all; font-size: 26rpx; }
+.date-button { display: flex; justify-content: center; align-items: center; padding: 22rpx; margin: 20rpx 0; border-radius: 24rpx; background: #EAF4FF; color: #007AFF; font-size: 32rpx; font-weight: 600; }
+.list-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 24rpx 0; border-bottom: 1rpx solid #EEF0F3; font-size: 28rpx; }
+.list-row:last-child { border-bottom: 0; }
+.text-button { background: transparent; color: #007AFF; padding: 18rpx 12rpx; text-align: left; font-size: 28rpx; line-height: 1.5; }
+.quantity-input { width: 150rpx; flex-shrink: 0; }
+.sheet-mask { position: fixed; inset: 0; z-index: 50; background: rgba(17,24,39,.35); display: flex; align-items: flex-end; }
+.sheet { width: 100%; max-height: 86vh; box-sizing: border-box; border-radius: 36rpx 36rpx 0 0; background: #FFFFFF; padding: 28rpx 28rpx calc(36rpx + env(safe-area-inset-bottom)); }
+.error-message { padding: 24rpx; margin: 20rpx 0; border-radius: 20rpx; color: #B42318; background: #FFF0EF; word-break: break-word; font-size: 28rpx; }
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16rpx; margin-bottom: 24rpx; }
+.summary-cell { background: #FFFFFF; padding: 24rpx; border-radius: 24rpx; font-size: 28rpx; line-height: 1.7; }
+.accent { color: #007AFF; font-weight: 600; }
+.stock-amount { font-size: 42rpx; font-weight: 700; margin: 16rpx 0; }
+.warning-text { color: #9A5A00; font-size: 28rpx; line-height: 1.7; }
+.selection-row, .shopping-item { border-bottom: 1rpx solid #EEF0F3; padding: 20rpx 0; }
+.child-task { margin: 18rpx 0 0 20rpx; padding: 12rpx 0 12rpx 20rpx; border-left: 3rpx solid #E5E7EB; }

@@ -1,0 +1,6 @@
+<view class="state-panel {{type}}">
+  <view wx:if="{{type === 'loading'}}" class="spinner"></view>
+  <view class="state-title">{{title}}</view>
+  <view wx:if="{{description}}" class="state-description">{{description}}</view>
+  <button wx:if="{{type === 'error'}}" class="retry" bindtap="retry">重试</button>
+</view>

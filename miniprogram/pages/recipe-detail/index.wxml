@@ -1,0 +1,11 @@
+<view class="page">
+  <state-panel wx:if="{{loading}}" type="loading" title="正在加载菜谱"/>
+  <state-panel wx:if="{{error}}" type="error" title="操作失败" description="{{error}}" bind:retry="load"/>
+  <block wx:if="{{recipe}}"><image wx:if="{{recipe.cover}}" class="detail-cover" src="{{recipe.cover}}" mode="aspectFill"/><view class="screen-title">{{recipe.title}}</view><view class="muted block">{{recipe.default_servings}} 人份</view>
+    <surface-card><view class="paragraph">{{recipe.description || '未填写简介'}}</view></surface-card>
+    <view class="section-label">食材</view><surface-card><view wx:for="{{recipe.ingredients}}" wx:key="ingredient_id" class="list-row"><view>{{item.name}}<view class="muted">{{item.note}}</view></view><text>{{item.quantity === null ? '适量' : item.quantity}} {{item.unit_code || ''}}</text></view></surface-card>
+    <view class="section-label">做法</view><surface-card><text class="paragraph">{{recipe.instructions || '未填写做法'}}</text></surface-card>
+    <view wx:if="{{recipe.links.length}}" class="section-label">参考链接</view><button wx:for="{{recipe.links}}" wx:key="id" class="secondary-button block link" data-index="{{index}}" bindtap="openLink">{{item.url}}</button>
+    <view class="toolbar"><button class="primary-button grow" bindtap="edit">编辑菜谱</button><button class="danger-button" disabled="{{working}}" bindtap="remove">删除</button></view>
+  </block>
+</view>

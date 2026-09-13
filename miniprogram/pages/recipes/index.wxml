@@ -1,0 +1,11 @@
+<view class="page">
+  <top-bar title="菜谱" subtitle="把每一顿的灵感留在家里" avatar="{{avatar}}" bind:settings="openSettings" />
+  <view class="toolbar"><input class="search" placeholder="搜索菜名或描述" maxlength="200" value="{{q}}" data-field="q" bindinput="input" bindconfirm="load" confirm-type="search"/><button class="secondary-button" bindtap="load">搜索</button></view>
+  <scroll-view scroll-x class="pills"><button class="pill {{categoryId === '' ? 'selected' : ''}}" data-id="" bindtap="category">全部</button><button wx:for="{{categories}}" wx:key="id" class="pill {{categoryId == item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="category">{{item.name}}</button></scroll-view>
+  <button class="primary-button block" bindtap="create">＋ 记录菜谱</button>
+  <state-panel wx:if="{{error}}" type="error" title="加载失败" description="{{error}}" bind:retry="load"/>
+  <state-panel wx:if="{{loading && !items.length}}" type="loading" title="正在加载菜谱"/>
+  <state-panel wx:if="{{!loading && !error && !items.length}}" title="还没有菜谱" description="记录第一道家常菜，或换个关键词试试。"/>
+  <view class="recipe-grid"><view wx:for="{{items}}" wx:key="id" class="recipe-card" data-id="{{item.id}}" bindtap="detail"><image wx:if="{{item.cover}}" class="cover" src="{{item.cover}}" mode="aspectFill"/><view wx:else class="cover cover-empty">食</view><view class="card-body"><view class="card-title">{{item.title}}</view><view class="muted ellipsis">{{item.description}}</view><view class="muted">{{item.default_servings}} 人份</view></view></view></view>
+  <button wx:if="{{more && items.length}}" class="secondary-button block" loading="{{loading}}" bindtap="loadMore">加载更多</button>
+</view>

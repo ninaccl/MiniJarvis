@@ -1,0 +1,7 @@
+<view class="page onboarding">
+  <view class="brand"><view class="eyebrow">FAMILY KITCHEN</view><view class="screen-title">从一个家庭开始</view><view class="muted">创建家庭，或用邀请码加入家人的厨房。</view></view>
+  <surface-card><view class="section-title">创建家庭</view><form-field label="家庭名称" value="{{householdName}}" placeholder="例如：周末小厨房" bind:change="onNameChange" /><button class="primary-button action" loading="{{working}}" bindtap="createHousehold">创建并继续</button></surface-card>
+  <view class="divider"><view></view><text>或</text><view></view></view>
+  <surface-card><view class="section-title">加入已有家庭</view><form-field label="8 位邀请码" value="{{inviteCode}}" placeholder="例如 A1B2C3D4" maxlength="8" bind:change="onInviteChange" /><button class="secondary-button action" loading="{{working}}" bindtap="joinHousehold">加入家庭</button></surface-card>
+  <state-panel wx:if="{{error}}" type="error" title="暂时无法继续" description="{{error}}" bind:retry="retry" />
+</view>

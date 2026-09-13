@@ -1,0 +1,15 @@
+.DS_Store
+.env
+backend/.env
+backend/vendor/
+backend/.phpunit.cache/
+backend/coverage/
+*.log
+
+# The WeChat mini-program has its own dependency and build lifecycle.
+miniprogram/miniprogram_npm/
+miniprogram/node_modules/
+.superpowers/
+miniprogram/project.config.json
+miniprogram/project.private.config.json
+docs/superpowers/

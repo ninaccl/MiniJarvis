@@ -1,0 +1,1 @@
+<view wx:if="{{open}}" class="mask" bindtap="close"><view class="sheet" catchtap="noop"><view class="sheet-title">{{title}}</view><slot /><view class="actions"><button class="cancel" bindtap="close">取消</button><button class="confirm" bindtap="confirm">{{confirmText}}</button></view></view></view>

@@ -1,0 +1,35 @@
+{
+  "pages": [
+    "pages/recipes/index",
+    "pages/calendar/index",
+    "pages/inventory/index",
+    "pages/shopping/index",
+    "pages/tasks/index",
+    "pages/onboarding/index",
+    "pages/settings/index",
+    "pages/recipe-detail/index",
+    "pages/recipe-edit/index"
+  ],
+  "window": {
+    "backgroundColor": "#F5F5F7",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#F5F5F7",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "家常食光"
+  },
+  "tabBar": {
+    "color": "#6B7280",
+    "selectedColor": "#007AFF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/recipes/index", "text": "菜谱", "iconPath": "assets/tab/recipes.png", "selectedIconPath": "assets/tab/recipes-active.png" },
+      { "pagePath": "pages/calendar/index", "text": "日历", "iconPath": "assets/tab/calendar.png", "selectedIconPath": "assets/tab/calendar-active.png" },
+      { "pagePath": "pages/inventory/index", "text": "库存", "iconPath": "assets/tab/inventory.png", "selectedIconPath": "assets/tab/inventory-active.png" },
+      { "pagePath": "pages/shopping/index", "text": "采购", "iconPath": "assets/tab/shopping.png", "selectedIconPath": "assets/tab/shopping-active.png" },
+      { "pagePath": "pages/tasks/index", "text": "待办", "iconPath": "assets/tab/tasks.png", "selectedIconPath": "assets/tab/tasks-active.png" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

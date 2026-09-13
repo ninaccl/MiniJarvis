@@ -1,0 +1,1 @@
+{ "navigationBarTitleText": "家庭与设置", "usingComponents": { "surface-card": "/components/surface-card/index", "status-pill": "/components/status-pill/index", "state-panel": "/components/state-panel/index" } }
