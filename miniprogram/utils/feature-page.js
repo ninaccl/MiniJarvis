@@ -1,7 +1,8 @@
 function api() { return getApp().globalData.api; }
 function mediaUrl(url) {
   if (!url) return '';
-  return url.startsWith('/') ? getApp().globalData.config.baseUrl.replace(/\/api\/v1\/?$/, '') + url : url;
+  const base = getApp().globalData.config.baseUrl.replace(/\/api\/v1\/?$/, '').replace(/\/index\.php\/?$/, '');
+  return url.startsWith('/') ? base + url : url;
 }
 async function ready() {
   const app = getApp();

@@ -24,7 +24,7 @@ final class UploadService
     {
         $error = $file['error'] ?? UPLOAD_ERR_NO_FILE;
         $source = $file['tmp_name'] ?? null;
-        if ($error !== UPLOAD_ERR_OK || !is_string($source) || !str_starts_with($source, DIRECTORY_SEPARATOR) || !is_file($source) || !is_readable($source)) {
+        if ($error !== UPLOAD_ERR_OK || !is_string($source) || !is_file($source) || !is_readable($source)) {
             throw new ApiException(422, 'UPLOAD_INVALID', 'A valid uploaded image is required.');
         }
         $size = filesize($source);

@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+$requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+$basePrefix = '/backend';
+if ($basePrefix !== '/' && str_starts_with($requestUri, $basePrefix)) {
+    $requestUri = substr($requestUri, strlen($basePrefix)) ?: '/';
+}
+if (str_starts_with($requestUri, '/public/index.php')) {
+    $requestUri = substr($requestUri, strlen('/public/index.php')) ?: '/';
+}
+$_SERVER['REQUEST_URI'] = $requestUri;
+
 use App\Auth\AuthController;
 use App\Auth\AuthMiddleware;
 use App\Auth\AuthService;
