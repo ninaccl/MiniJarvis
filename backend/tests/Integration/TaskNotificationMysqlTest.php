@@ -32,7 +32,7 @@ final class TaskNotificationMysqlTest extends TestCase
         $this->pdo = new PDO(getenv('JARVIS_TEST_MYSQL_DSN'), getenv('JARVIS_TEST_MYSQL_USER') ?: 'root', getenv('JARVIS_TEST_MYSQL_PASSWORD') ?: '');
         new Connection($this->pdo);
         $this->pdo->beginTransaction();
-        $insert = $this->pdo->prepare('INSERT INTO users (openid) VALUES (?)');
+        $insert = $this->pdo->prepare('INSERT INTO jarvis_users (openid) VALUES (?)');
         $insert->execute(['regression:' . bin2hex(random_bytes(12))]);
         $this->userId = (int) $this->pdo->lastInsertId();
         $this->householdId = (new PdoHouseholdStore($this->pdo))->create('Regression fixture', $this->userId, hash('sha256', random_bytes(32)));
@@ -44,9 +44,9 @@ final class TaskNotificationMysqlTest extends TestCase
     {
         if (isset($this->pdo) && $this->pdo->inTransaction()) $this->pdo->rollBack();
         if ($this->committedFixture) {
-            $this->pdo->exec('DELETE FROM tasks WHERE household_id = ' . $this->householdId);
-            $this->pdo->exec('DELETE FROM households WHERE id = ' . $this->householdId);
-            $this->pdo->exec('DELETE FROM users WHERE id = ' . $this->userId);
+            $this->pdo->exec('DELETE FROM jarvis_tasks WHERE household_id = ' . $this->householdId);
+            $this->pdo->exec('DELETE FROM jarvis_households WHERE id = ' . $this->householdId);
+            $this->pdo->exec('DELETE FROM jarvis_users WHERE id = ' . $this->userId);
         }
     }
 
@@ -77,7 +77,7 @@ final class TaskNotificationMysqlTest extends TestCase
         $grant = $this->notifications->claimGrant($this->householdId, $this->userId, 'inventory_expiry', $job['id']);
         $this->notifications->recordSendAttempt($job['id']);
         $this->notifications->markTransientFailure($job['id'], $grant, 1, 'temporary network failure');
-        $row = $this->pdo->query('SELECT status, last_error FROM notification_jobs WHERE id = ' . $job['id'])->fetch();
+        $row = $this->pdo->query('SELECT status, last_error FROM jarvis_notification_jobs WHERE id = ' . $job['id'])->fetch();
         self::assertSame('pending', $row['status']);
         self::assertSame('temporary network failure', $row['last_error']);
     }
@@ -89,10 +89,10 @@ final class TaskNotificationMysqlTest extends TestCase
 
     public function testFourExpiryCronRoundsWithoutGrantCancelOnceWithoutCountingSendAttempts(): void
     {
-        $ingredient = $this->pdo->prepare("INSERT INTO ingredients (household_id, name, normalized_name, default_unit_code, created_by) VALUES (?, 'Milk', 'milk', 'ml', ?)");
+        $ingredient = $this->pdo->prepare("INSERT INTO jarvis_ingredients (household_id, name, normalized_name, default_unit_code, created_by) VALUES (?, 'Milk', 'milk', 'ml', ?)");
         $ingredient->execute([$this->householdId, $this->userId]);
         $ingredientId = (int) $this->pdo->lastInsertId();
-        $batch = $this->pdo->prepare("INSERT INTO inventory_batches (household_id, ingredient_id, quantity, unit_code, display_quantity, display_unit_code, expires_on, created_by) VALUES (?, ?, 100, 'ml', 100, 'ml', '2026-09-15', ?)");
+        $batch = $this->pdo->prepare("INSERT INTO jarvis_inventory_batches (household_id, ingredient_id, quantity, unit_code, display_quantity, display_unit_code, expires_on, created_by) VALUES (?, ?, 100, 'ml', 100, 'ml', '2026-09-15', ?)");
         $batch->execute([$this->householdId, $ingredientId, $this->userId]);
         $sender = new QueueNotificationSender();
         $service = new ReminderService(new InMemoryTransactionManager(), $this->notifications, $sender, new TenantGuard());
@@ -102,7 +102,7 @@ final class TaskNotificationMysqlTest extends TestCase
             $service->materializeExpiry($now);
             $skipped += $service->deliverDue($now)['skipped_no_grant'];
         }
-        $statement = $this->pdo->prepare('SELECT status, attempts FROM notification_jobs WHERE household_id = ?');
+        $statement = $this->pdo->prepare('SELECT status, attempts FROM jarvis_notification_jobs WHERE household_id = ?');
         $statement->execute([$this->householdId]);
         self::assertSame([['status' => 'cancelled', 'attempts' => 0]], $statement->fetchAll());
         self::assertSame(1, $skipped);
@@ -114,9 +114,9 @@ final class TaskNotificationMysqlTest extends TestCase
     {
         $key = 'regression:protected:' . $this->householdId;
         $this->notifications->upsertJob($this->householdId, $this->userId, $key, 'inventory_expiry', '2020-01-01 00:00:00', ['summary' => 'Original']);
-        $state = $this->pdo->prepare('UPDATE notification_jobs SET status = ? WHERE event_key = ?');
+        $state = $this->pdo->prepare('UPDATE jarvis_notification_jobs SET status = ? WHERE event_key = ?');
         $state->execute([$status, $key]);
-        $query = $this->pdo->prepare('SELECT status, scheduled_at, payload_snapshot, updated_at FROM notification_jobs WHERE event_key = ?');
+        $query = $this->pdo->prepare('SELECT status, scheduled_at, payload_snapshot, updated_at FROM jarvis_notification_jobs WHERE event_key = ?');
         $query->execute([$key]);
         $before = $query->fetch();
         $this->notifications->upsertJob($this->householdId, $this->userId, $key, 'inventory_expiry', '2021-02-03 00:00:00', ['summary' => 'Changed']);

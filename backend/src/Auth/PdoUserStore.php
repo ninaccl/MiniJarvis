@@ -15,7 +15,7 @@ final class PdoUserStore implements UserStore
     public function upsertByOpenId(string $openId, ?string $nickname, ?string $avatarUrl): array
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO users (openid, nickname, avatar_url) VALUES (:openid, :nickname, :avatar_url) '
+            'INSERT INTO jarvis_users (openid, nickname, avatar_url) VALUES (:openid, :nickname, :avatar_url) '
             . 'ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), '
             . 'nickname = COALESCE(VALUES(nickname), nickname), avatar_url = COALESCE(VALUES(avatar_url), avatar_url), '
             . 'updated_at = CURRENT_TIMESTAMP(6)'
@@ -23,7 +23,7 @@ final class PdoUserStore implements UserStore
         $statement->execute(['openid' => $openId, 'nickname' => $nickname, 'avatar_url' => $avatarUrl]);
         $id = (int) $this->pdo->lastInsertId();
 
-        $query = $this->pdo->prepare('SELECT id, openid, nickname, avatar_url FROM users WHERE id = :id');
+        $query = $this->pdo->prepare('SELECT id, openid, nickname, avatar_url FROM jarvis_users WHERE id = :id');
         $query->execute(['id' => $id]);
         /** @var array{id:int|string,openid:string,nickname:?string,avatar_url:?string} $user */
         $user = $query->fetch();

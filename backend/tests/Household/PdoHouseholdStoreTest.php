@@ -20,19 +20,19 @@ final class PdoHouseholdStoreTest extends TestCase
 
         self::assertCount(4, $pdo->statements);
         self::assertSame(
-            'UPDATE shopping_list_items SET checked_household_id = NULL, checked_by = NULL WHERE household_id = :scope_household_id AND checked_household_id = :member_household_id AND checked_by = :user_id',
+            'UPDATE jarvis_shopping_list_items SET checked_household_id = NULL, checked_by = NULL WHERE household_id = :scope_household_id AND checked_household_id = :member_household_id AND checked_by = :user_id',
             $pdo->statements[0]->normalizedSql(),
         );
         self::assertSame(
-            'UPDATE shopping_list_items SET stocked_household_id = NULL, stocked_by = NULL WHERE household_id = :scope_household_id AND stocked_household_id = :member_household_id AND stocked_by = :user_id',
+            'UPDATE jarvis_shopping_list_items SET stocked_household_id = NULL, stocked_by = NULL WHERE household_id = :scope_household_id AND stocked_household_id = :member_household_id AND stocked_by = :user_id',
             $pdo->statements[1]->normalizedSql(),
         );
         self::assertSame(
-            'UPDATE tasks SET assigned_household_id = NULL, assigned_to = NULL WHERE household_id = :scope_household_id AND assigned_household_id = :member_household_id AND assigned_to = :user_id',
+            'UPDATE jarvis_tasks SET assigned_household_id = NULL, assigned_to = NULL WHERE household_id = :scope_household_id AND assigned_household_id = :member_household_id AND assigned_to = :user_id',
             $pdo->statements[2]->normalizedSql(),
         );
         self::assertSame(
-            "DELETE FROM household_members WHERE household_id = :household_id AND user_id = :user_id AND role <> 'owner'",
+            "DELETE FROM jarvis_household_members WHERE household_id = :household_id AND user_id = :user_id AND role <> 'owner'",
             $pdo->statements[3]->normalizedSql(),
         );
 

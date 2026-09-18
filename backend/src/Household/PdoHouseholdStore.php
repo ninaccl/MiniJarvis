@@ -17,7 +17,7 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         $statement = $this->pdo->prepare(
             'SELECT hm.household_id, hm.user_id, hm.role, u.nickname, u.avatar_url '
-            . 'FROM household_members hm JOIN users u ON u.id = hm.user_id WHERE hm.user_id = :user_id LIMIT 1'
+            . 'FROM jarvis_household_members hm JOIN jarvis_users u ON u.id = hm.user_id WHERE hm.user_id = :user_id LIMIT 1'
         );
         $statement->execute(['user_id' => $userId]);
         return $this->memberRow($statement->fetch());
@@ -25,7 +25,7 @@ final class PdoHouseholdStore implements HouseholdStore
 
     public function inviteHashExists(string $inviteHash): bool
     {
-        $statement = $this->pdo->prepare('SELECT 1 FROM households WHERE invite_code_hash = :hash LIMIT 1');
+        $statement = $this->pdo->prepare('SELECT 1 FROM jarvis_households WHERE invite_code_hash = :hash LIMIT 1');
         $statement->execute(['hash' => $inviteHash]);
         return $statement->fetchColumn() !== false;
     }
@@ -34,12 +34,12 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         try {
             $statement = $this->pdo->prepare(
-                'INSERT INTO households (name, owner_user_id, invite_code_hash) VALUES (:name, :owner, :hash)'
+                'INSERT INTO jarvis_households (name, owner_user_id, invite_code_hash) VALUES (:name, :owner, :hash)'
             );
             $statement->execute(['name' => $name, 'owner' => $ownerUserId, 'hash' => $inviteHash]);
             $householdId = (int) $this->pdo->lastInsertId();
             $member = $this->pdo->prepare(
-                "INSERT INTO household_members (household_id, user_id, role) VALUES (:household_id, :user_id, 'owner')"
+                "INSERT INTO jarvis_household_members (household_id, user_id, role) VALUES (:household_id, :user_id, 'owner')"
             );
             $member->execute(['household_id' => $householdId, 'user_id' => $ownerUserId]);
             return $householdId;
@@ -51,7 +51,7 @@ final class PdoHouseholdStore implements HouseholdStore
     public function householdByInviteHash(string $inviteHash): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, name, owner_user_id, invite_code_hash FROM households WHERE invite_code_hash = :hash LIMIT 1'
+            'SELECT id, name, owner_user_id, invite_code_hash FROM jarvis_households WHERE invite_code_hash = :hash LIMIT 1'
         );
         $statement->execute(['hash' => $inviteHash]);
         return $this->householdRow($statement->fetch());
@@ -61,7 +61,7 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         try {
             $statement = $this->pdo->prepare(
-                "INSERT INTO household_members (household_id, user_id, role) VALUES (:household_id, :user_id, 'member')"
+                "INSERT INTO jarvis_household_members (household_id, user_id, role) VALUES (:household_id, :user_id, 'member')"
             );
             $statement->execute(['household_id' => $householdId, 'user_id' => $userId]);
         } catch (PDOException $exception) {
@@ -72,7 +72,7 @@ final class PdoHouseholdStore implements HouseholdStore
     public function household(int $householdId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, name, owner_user_id, invite_code_hash FROM households WHERE id = :id LIMIT 1'
+            'SELECT id, name, owner_user_id, invite_code_hash FROM jarvis_households WHERE id = :id LIMIT 1'
         );
         $statement->execute(['id' => $householdId]);
         return $this->householdRow($statement->fetch());
@@ -82,7 +82,7 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         $statement = $this->pdo->prepare(
             'SELECT hm.household_id, hm.user_id, hm.role, u.nickname, u.avatar_url '
-            . 'FROM household_members hm JOIN users u ON u.id = hm.user_id '
+            . 'FROM jarvis_household_members hm JOIN jarvis_users u ON u.id = hm.user_id '
             . 'WHERE hm.household_id = :household_id ORDER BY (hm.role = \'owner\') DESC, hm.joined_at, hm.user_id'
         );
         $statement->execute(['household_id' => $householdId]);
@@ -97,7 +97,7 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         $statement = $this->pdo->prepare(
             'SELECT hm.household_id, hm.user_id, hm.role, u.nickname, u.avatar_url '
-            . 'FROM household_members hm JOIN users u ON u.id = hm.user_id '
+            . 'FROM jarvis_household_members hm JOIN jarvis_users u ON u.id = hm.user_id '
             . 'WHERE hm.household_id = :household_id AND hm.user_id = :user_id LIMIT 1'
         );
         $statement->execute(['household_id' => $householdId, 'user_id' => $userId]);
@@ -108,7 +108,7 @@ final class PdoHouseholdStore implements HouseholdStore
     {
         try {
             $statement = $this->pdo->prepare(
-                'UPDATE households SET invite_code_hash = :hash, updated_at = CURRENT_TIMESTAMP(6) WHERE id = :id'
+                'UPDATE jarvis_households SET invite_code_hash = :hash, updated_at = CURRENT_TIMESTAMP(6) WHERE id = :id'
             );
             $statement->execute(['hash' => $inviteHash, 'id' => $householdId]);
         } catch (PDOException $exception) {
@@ -119,11 +119,11 @@ final class PdoHouseholdStore implements HouseholdStore
     public function removeMember(int $householdId, int $userId): bool
     {
         $memberReferences = [
-            'UPDATE shopping_list_items SET checked_household_id = NULL, checked_by = NULL '
+            'UPDATE jarvis_shopping_list_items SET checked_household_id = NULL, checked_by = NULL '
                 . 'WHERE household_id = :scope_household_id AND checked_household_id = :member_household_id AND checked_by = :user_id',
-            'UPDATE shopping_list_items SET stocked_household_id = NULL, stocked_by = NULL '
+            'UPDATE jarvis_shopping_list_items SET stocked_household_id = NULL, stocked_by = NULL '
                 . 'WHERE household_id = :scope_household_id AND stocked_household_id = :member_household_id AND stocked_by = :user_id',
-            'UPDATE tasks SET assigned_household_id = NULL, assigned_to = NULL '
+            'UPDATE jarvis_tasks SET assigned_household_id = NULL, assigned_to = NULL '
                 . 'WHERE household_id = :scope_household_id AND assigned_household_id = :member_household_id AND assigned_to = :user_id',
         ];
         foreach ($memberReferences as $sql) {
@@ -136,7 +136,7 @@ final class PdoHouseholdStore implements HouseholdStore
         }
 
         $statement = $this->pdo->prepare(
-            "DELETE FROM household_members WHERE household_id = :household_id AND user_id = :user_id AND role <> 'owner'"
+            "DELETE FROM jarvis_household_members WHERE household_id = :household_id AND user_id = :user_id AND role <> 'owner'"
         );
         $statement->execute(['household_id' => $householdId, 'user_id' => $userId]);
         return $statement->rowCount() === 1;

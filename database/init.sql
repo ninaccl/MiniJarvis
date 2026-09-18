@@ -4,7 +4,7 @@ CREATE DATABASE IF NOT EXISTS jarvis_family
 
 USE jarvis_family;
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS jarvis_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   openid VARCHAR(128) NOT NULL,
   nickname VARCHAR(255) NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uq_users_openid (openid)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS api_sessions (
+CREATE TABLE IF NOT EXISTS jarvis_api_sessions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
   token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS api_sessions (
   PRIMARY KEY (id),
   UNIQUE KEY uq_api_sessions_token_hash (token_hash),
   KEY idx_api_sessions_user_expiry (user_id, expires_at),
-  CONSTRAINT fk_api_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT fk_api_sessions_user FOREIGN KEY (user_id) REFERENCES jarvis_users (id) ON DELETE CASCADE,
   CONSTRAINT chk_api_sessions_hash CHECK (CHAR_LENGTH(token_hash) = 64)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS households (
+CREATE TABLE IF NOT EXISTS jarvis_households (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(120) NOT NULL,
   owner_user_id BIGINT UNSIGNED NOT NULL,
@@ -39,12 +39,12 @@ CREATE TABLE IF NOT EXISTS households (
   PRIMARY KEY (id),
   UNIQUE KEY uq_households_invite_hash (invite_code_hash),
   KEY idx_households_owner (owner_user_id),
-  CONSTRAINT fk_households_owner FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_households_owner FOREIGN KEY (owner_user_id) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_households_name CHECK (CHAR_LENGTH(TRIM(name)) > 0),
   CONSTRAINT chk_households_invite_hash CHECK (CHAR_LENGTH(invite_code_hash) = 64)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS household_members (
+CREATE TABLE IF NOT EXISTS jarvis_household_members (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS household_members (
   UNIQUE KEY uq_household_members_user (user_id),
   UNIQUE KEY uq_household_members_household_user (household_id, user_id),
   KEY idx_household_members_tenant_role (household_id, role),
-  CONSTRAINT fk_household_members_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_household_members_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT fk_household_members_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_household_members_user FOREIGN KEY (user_id) REFERENCES jarvis_users (id) ON DELETE CASCADE,
   CONSTRAINT chk_household_members_role CHECK (role IN ('owner', 'member'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS recipe_categories (
+CREATE TABLE IF NOT EXISTS jarvis_recipe_categories (
   id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(32) NOT NULL,
   sort_order SMALLINT UNSIGNED NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS recipe_categories (
   UNIQUE KEY uq_recipe_categories_sort (sort_order)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS units (
+CREATE TABLE IF NOT EXISTS jarvis_units (
   code VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   display_name VARCHAR(32) NOT NULL,
   dimension VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS units (
   CONSTRAINT chk_units_factor CHECK (base_factor > 0)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS ingredients (
+CREATE TABLE IF NOT EXISTS jarvis_ingredients (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   name VARCHAR(120) NOT NULL,
@@ -94,13 +94,13 @@ CREATE TABLE IF NOT EXISTS ingredients (
   UNIQUE KEY uq_ingredients_household_normalized (household_id, normalized_name),
   KEY idx_ingredients_tenant_updated (household_id, updated_at),
   KEY idx_ingredients_creator (created_by),
-  CONSTRAINT fk_ingredients_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_ingredients_unit FOREIGN KEY (default_unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_ingredients_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_ingredients_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_ingredients_unit FOREIGN KEY (default_unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_ingredients_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_ingredients_name CHECK (CHAR_LENGTH(TRIM(name)) > 0)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS recipes (
+CREATE TABLE IF NOT EXISTS jarvis_recipes (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   category_id SMALLINT UNSIGNED NULL,
@@ -120,14 +120,14 @@ CREATE TABLE IF NOT EXISTS recipes (
   KEY idx_recipes_tenant_deleted_updated (household_id, deleted_at, updated_at),
   KEY idx_recipes_tenant_category (household_id, category_id),
   KEY idx_recipes_creator (created_by),
-  CONSTRAINT fk_recipes_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_recipes_category FOREIGN KEY (category_id) REFERENCES recipe_categories (id) ON DELETE SET NULL,
-  CONSTRAINT fk_recipes_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_recipes_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_recipes_category FOREIGN KEY (category_id) REFERENCES jarvis_recipe_categories (id) ON DELETE SET NULL,
+  CONSTRAINT fk_recipes_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_recipes_name CHECK (CHAR_LENGTH(TRIM(name)) > 0),
   CONSTRAINT chk_recipes_servings CHECK (servings > 0)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS recipe_ingredients (
+CREATE TABLE IF NOT EXISTS jarvis_recipe_ingredients (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   recipe_id BIGINT UNSIGNED NOT NULL,
@@ -139,15 +139,15 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
   PRIMARY KEY (id),
   UNIQUE KEY uq_recipe_ingredients_recipe_ingredient (household_id, recipe_id, ingredient_id),
   KEY idx_recipe_ingredients_tenant_ingredient (household_id, ingredient_id),
-  CONSTRAINT fk_recipe_ingredients_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES recipes (household_id, id) ON DELETE CASCADE,
-  CONSTRAINT fk_recipe_ingredients_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES ingredients (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_recipe_ingredients_unit FOREIGN KEY (unit_code) REFERENCES units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_recipe_ingredients_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES jarvis_recipes (household_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_recipe_ingredients_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES jarvis_ingredients (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_recipe_ingredients_unit FOREIGN KEY (unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
   CONSTRAINT chk_recipe_ingredients_quantity CHECK (
     (quantity IS NULL AND unit_code IS NULL) OR (quantity > 0 AND unit_code IS NOT NULL)
   )
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS recipe_links (
+CREATE TABLE IF NOT EXISTS jarvis_recipe_links (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   recipe_id BIGINT UNSIGNED NOT NULL,
@@ -161,13 +161,13 @@ CREATE TABLE IF NOT EXISTS recipe_links (
   UNIQUE KEY uq_recipe_links_tenant_id (household_id, id),
   KEY idx_recipe_links_tenant_recipe (household_id, recipe_id),
   KEY idx_recipe_links_creator (created_by),
-  CONSTRAINT fk_recipe_links_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_recipe_links_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES recipes (household_id, id) ON DELETE CASCADE,
-  CONSTRAINT fk_recipe_links_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_recipe_links_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_recipe_links_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES jarvis_recipes (household_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_recipe_links_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_recipe_links_platform CHECK (platform IN ('douyin', 'bilibili', 'xiaohongshu', 'other'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS link_previews (
+CREATE TABLE IF NOT EXISTS jarvis_link_previews (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -190,13 +190,13 @@ CREATE TABLE IF NOT EXISTS link_previews (
   UNIQUE KEY uq_link_previews_recipe_link (recipe_link_id),
   KEY idx_link_previews_tenant_link (household_id, recipe_link_id),
   KEY idx_link_previews_tenant_url (household_id, url_hash),
-  CONSTRAINT fk_link_previews_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_link_previews_member FOREIGN KEY (household_id, user_id) REFERENCES household_members (household_id, user_id) ON DELETE CASCADE,
-  CONSTRAINT fk_link_previews_recipe_link FOREIGN KEY (household_id, recipe_link_id) REFERENCES recipe_links (household_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_link_previews_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_link_previews_member FOREIGN KEY (household_id, user_id) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_link_previews_recipe_link FOREIGN KEY (household_id, recipe_link_id) REFERENCES jarvis_recipe_links (household_id, id) ON DELETE CASCADE,
   CONSTRAINT chk_link_previews_hash CHECK (CHAR_LENGTH(url_hash) = 64 AND CHAR_LENGTH(token_hash) = 64)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS inventory_batches (
+CREATE TABLE IF NOT EXISTS jarvis_inventory_batches (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   ingredient_id BIGINT UNSIGNED NOT NULL,
@@ -215,16 +215,16 @@ CREATE TABLE IF NOT EXISTS inventory_batches (
   UNIQUE KEY uq_inventory_batches_tenant_id (household_id, id),
   KEY idx_inventory_batches_tenant_expiry (household_id, expires_on),
   KEY idx_inventory_batches_tenant_ingredient (household_id, ingredient_id),
-  CONSTRAINT fk_inventory_batches_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_inventory_batches_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES ingredients (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_batches_unit FOREIGN KEY (unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_batches_display_unit FOREIGN KEY (display_unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_batches_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_batches_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_inventory_batches_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES jarvis_ingredients (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_batches_unit FOREIGN KEY (unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_batches_display_unit FOREIGN KEY (display_unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_batches_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_inventory_batches_quantity CHECK (quantity >= 0),
   CONSTRAINT chk_inventory_batches_display_quantity CHECK (display_quantity > 0)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS inventory_movements (
+CREATE TABLE IF NOT EXISTS jarvis_inventory_movements (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   batch_id BIGINT UNSIGNED NULL,
@@ -241,17 +241,17 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   KEY idx_inventory_movements_tenant_occurred (household_id, occurred_at),
   KEY idx_inventory_movements_tenant_ingredient (household_id, ingredient_id),
   KEY idx_inventory_movements_tenant_batch (household_id, batch_id),
-  CONSTRAINT fk_inventory_movements_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_inventory_movements_batch FOREIGN KEY (household_id, batch_id) REFERENCES inventory_batches (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_movements_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES ingredients (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_movements_unit FOREIGN KEY (unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_movements_display_unit FOREIGN KEY (display_unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_inventory_movements_actor FOREIGN KEY (actor_user_id) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_movements_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_inventory_movements_batch FOREIGN KEY (household_id, batch_id) REFERENCES jarvis_inventory_batches (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_movements_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES jarvis_ingredients (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_movements_unit FOREIGN KEY (unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_movements_display_unit FOREIGN KEY (display_unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_inventory_movements_actor FOREIGN KEY (actor_user_id) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_inventory_movements_type CHECK (movement_type IN ('add', 'consume', 'set')),
   CONSTRAINT chk_inventory_movements_display_quantity CHECK (display_quantity > 0)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS meal_plan_entries (
+CREATE TABLE IF NOT EXISTS jarvis_meal_plan_entries (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   recipe_id BIGINT UNSIGNED NOT NULL,
@@ -265,14 +265,14 @@ CREATE TABLE IF NOT EXISTS meal_plan_entries (
   PRIMARY KEY (id),
   KEY idx_meal_plan_tenant_date (household_id, meal_date, meal_type),
   KEY idx_meal_plan_tenant_recipe (household_id, recipe_id),
-  CONSTRAINT fk_meal_plan_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_meal_plan_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES recipes (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_meal_plan_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_meal_plan_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_meal_plan_recipe FOREIGN KEY (household_id, recipe_id) REFERENCES jarvis_recipes (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_meal_plan_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_meal_plan_type CHECK (meal_type IN ('breakfast', 'lunch', 'dinner')),
   CONSTRAINT chk_meal_plan_servings CHECK (servings > 0 AND servings <= 100)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS shopping_lists (
+CREATE TABLE IF NOT EXISTS jarvis_shopping_lists (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   name VARCHAR(120) NOT NULL,
@@ -285,13 +285,13 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
   PRIMARY KEY (id),
   UNIQUE KEY uq_shopping_lists_tenant_id (household_id, id),
   KEY idx_shopping_lists_tenant_status (household_id, status, updated_at),
-  CONSTRAINT fk_shopping_lists_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_shopping_lists_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_lists_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_shopping_lists_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_shopping_lists_name CHECK (CHAR_LENGTH(TRIM(name)) > 0),
   CONSTRAINT chk_shopping_lists_status CHECK (status IN ('active', 'completed'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS shopping_list_items (
+CREATE TABLE IF NOT EXISTS jarvis_shopping_list_items (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   shopping_list_id BIGINT UNSIGNED NOT NULL,
   household_id BIGINT UNSIGNED NOT NULL,
@@ -320,14 +320,14 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   KEY idx_shopping_items_checker_member (checked_household_id, checked_by),
   KEY idx_shopping_items_stocker_member (stocked_household_id, stocked_by),
   KEY idx_shopping_items_stocked_batch (household_id, stocked_batch_id),
-  CONSTRAINT fk_shopping_items_list FOREIGN KEY (household_id, shopping_list_id) REFERENCES shopping_lists (household_id, id) ON DELETE CASCADE,
-  CONSTRAINT fk_shopping_items_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_shopping_items_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES ingredients (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_shopping_items_recipe FOREIGN KEY (household_id, source_recipe_id) REFERENCES recipes (household_id, id) ON DELETE RESTRICT,
-  CONSTRAINT fk_shopping_items_unit FOREIGN KEY (unit_code) REFERENCES units (code) ON DELETE RESTRICT,
-  CONSTRAINT fk_shopping_items_checker FOREIGN KEY (checked_household_id, checked_by) REFERENCES household_members (household_id, user_id) ON DELETE RESTRICT,
-  CONSTRAINT fk_shopping_items_stocker FOREIGN KEY (stocked_household_id, stocked_by) REFERENCES household_members (household_id, user_id) ON DELETE RESTRICT,
-  CONSTRAINT fk_shopping_items_stocked_batch FOREIGN KEY (household_id, stocked_batch_id) REFERENCES inventory_batches (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_list FOREIGN KEY (household_id, shopping_list_id) REFERENCES jarvis_shopping_lists (household_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_shopping_items_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_shopping_items_ingredient FOREIGN KEY (household_id, ingredient_id) REFERENCES jarvis_ingredients (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_recipe FOREIGN KEY (household_id, source_recipe_id) REFERENCES jarvis_recipes (household_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_unit FOREIGN KEY (unit_code) REFERENCES jarvis_units (code) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_checker FOREIGN KEY (checked_household_id, checked_by) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_stocker FOREIGN KEY (stocked_household_id, stocked_by) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_shopping_items_stocked_batch FOREIGN KEY (household_id, stocked_batch_id) REFERENCES jarvis_inventory_batches (household_id, id) ON DELETE RESTRICT,
   CONSTRAINT chk_shopping_items_name CHECK (CHAR_LENGTH(TRIM(name)) > 0),
   CONSTRAINT chk_shopping_items_quantity CHECK (
     (required_quantity IS NULL AND inventory_offset IS NULL AND quantity IS NULL AND unit_code IS NULL)
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   )
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS tasks (
+CREATE TABLE IF NOT EXISTS jarvis_tasks (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   title VARCHAR(200) NOT NULL,
@@ -365,10 +365,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   KEY idx_tasks_tenant_parent (household_id, parent_id),
   KEY idx_tasks_assignment_member (assigned_household_id, assigned_to),
   KEY idx_tasks_assignee_status (assigned_to, status),
-  CONSTRAINT fk_tasks_household FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
-  CONSTRAINT fk_tasks_parent FOREIGN KEY (household_id, parent_id) REFERENCES tasks (household_id, id) ON DELETE CASCADE,
-  CONSTRAINT fk_tasks_assignee FOREIGN KEY (assigned_household_id, assigned_to) REFERENCES household_members (household_id, user_id) ON DELETE RESTRICT,
-  CONSTRAINT fk_tasks_creator FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_tasks_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
+  CONSTRAINT fk_tasks_parent FOREIGN KEY (household_id, parent_id) REFERENCES jarvis_tasks (household_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_tasks_assignee FOREIGN KEY (assigned_household_id, assigned_to) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_tasks_creator FOREIGN KEY (created_by) REFERENCES jarvis_users (id) ON DELETE RESTRICT,
   CONSTRAINT chk_tasks_title CHECK (CHAR_LENGTH(TRIM(title)) > 0),
   CONSTRAINT chk_tasks_assignee_tenant CHECK (
     (assigned_to IS NULL AND assigned_household_id IS NULL)
@@ -377,7 +377,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   CONSTRAINT chk_tasks_status CHECK (status IN ('pending', 'completed'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS notification_preferences (
+CREATE TABLE IF NOT EXISTS jarvis_notification_preferences (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -388,10 +388,10 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   PRIMARY KEY (id),
   UNIQUE KEY uq_notification_preferences_household_user (household_id, user_id),
   KEY idx_notification_preferences_expiry (inventory_expiry, household_id),
-  CONSTRAINT fk_notification_preferences_member FOREIGN KEY (household_id, user_id) REFERENCES household_members (household_id, user_id) ON DELETE CASCADE
+  CONSTRAINT fk_notification_preferences_member FOREIGN KEY (household_id, user_id) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS notification_grants (
+CREATE TABLE IF NOT EXISTS jarvis_notification_grants (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -402,12 +402,12 @@ CREATE TABLE IF NOT EXISTS notification_grants (
   consumed_at TIMESTAMP(6) NULL,
   PRIMARY KEY (id),
   KEY idx_notification_grants_available (household_id, user_id, template_type, status, id),
-  CONSTRAINT fk_notification_grants_member FOREIGN KEY (household_id, user_id) REFERENCES household_members (household_id, user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_notification_grants_member FOREIGN KEY (household_id, user_id) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE CASCADE,
   CONSTRAINT chk_notification_grants_template CHECK (template_type IN ('task_due', 'inventory_expiry')),
   CONSTRAINT chk_notification_grants_status CHECK (status IN ('available', 'claimed', 'consumed'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS notification_jobs (
+CREATE TABLE IF NOT EXISTS jarvis_notification_jobs (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   household_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -425,13 +425,13 @@ CREATE TABLE IF NOT EXISTS notification_jobs (
   UNIQUE KEY uq_notification_jobs_event_key (event_key),
   KEY idx_notification_jobs_delivery (status, scheduled_at),
   KEY idx_notification_jobs_tenant_user (household_id, user_id, status),
-  CONSTRAINT fk_notification_jobs_member FOREIGN KEY (household_id, user_id) REFERENCES household_members (household_id, user_id) ON DELETE CASCADE,
+  CONSTRAINT fk_notification_jobs_member FOREIGN KEY (household_id, user_id) REFERENCES jarvis_household_members (household_id, user_id) ON DELETE CASCADE,
   CONSTRAINT chk_notification_jobs_type CHECK (job_type IN ('task_due', 'inventory_expiry')),
   CONSTRAINT chk_notification_jobs_status CHECK (status IN ('pending', 'sending', 'sent', 'permanent_failed', 'cancelled')),
   CONSTRAINT chk_notification_jobs_attempts CHECK (attempts <= 3)
 ) ENGINE=InnoDB;
 
-INSERT INTO recipe_categories (name, sort_order) VALUES
+INSERT INTO jarvis_recipe_categories (name, sort_order) VALUES
   ('荤菜', 10),
   ('素菜', 20),
   ('汤', 30),
@@ -440,7 +440,7 @@ INSERT INTO recipe_categories (name, sort_order) VALUES
   ('其他', 60)
 ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order);
 
-INSERT INTO units (code, display_name, dimension, base_factor) VALUES
+INSERT INTO jarvis_units (code, display_name, dimension, base_factor) VALUES
   ('g', '克', 'mass', 1.000000),
   ('kg', '千克', 'mass', 1000.000000),
   ('ml', '毫升', 'volume', 1.000000),

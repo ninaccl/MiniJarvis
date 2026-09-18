@@ -46,7 +46,7 @@ final class PdoMealPlanRepository implements MealPlanRepository
 
     public function create(int $householdId, int $userId, array $entry): int
     {
-        $statement = $this->pdo->prepare('INSERT INTO meal_plan_entries (household_id, recipe_id, meal_date, meal_type, servings, created_by) VALUES (:household_id, :recipe_id, :meal_date, :meal_type, :servings, :created_by)');
+        $statement = $this->pdo->prepare('INSERT INTO jarvis_meal_plan_entries (household_id, recipe_id, meal_date, meal_type, servings, created_by) VALUES (:household_id, :recipe_id, :meal_date, :meal_type, :servings, :created_by)');
         $statement->execute([
             'household_id' => $householdId, 'recipe_id' => $entry['recipe_id'], 'meal_date' => $entry['date'],
             'meal_type' => $entry['meal'], 'servings' => $entry['servings'], 'created_by' => $userId,
@@ -56,21 +56,21 @@ final class PdoMealPlanRepository implements MealPlanRepository
 
     public function updateServings(int $householdId, int $entryId, string $servings): bool
     {
-        $statement = $this->pdo->prepare('UPDATE meal_plan_entries SET servings = :servings, updated_at = CURRENT_TIMESTAMP(6) WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('UPDATE jarvis_meal_plan_entries SET servings = :servings, updated_at = CURRENT_TIMESTAMP(6) WHERE household_id = :household_id AND id = :id');
         $statement->execute(['servings' => $servings, 'household_id' => $householdId, 'id' => $entryId]);
         return $statement->rowCount() === 1 || $this->find($householdId, $entryId) !== null;
     }
 
     public function delete(int $householdId, int $entryId): bool
     {
-        $statement = $this->pdo->prepare('DELETE FROM meal_plan_entries WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('DELETE FROM jarvis_meal_plan_entries WHERE household_id = :household_id AND id = :id');
         $statement->execute(['household_id' => $householdId, 'id' => $entryId]);
         return $statement->rowCount() === 1;
     }
 
     private function select(): string
     {
-        return 'SELECT m.id, m.household_id, m.recipe_id, m.meal_date, m.meal_type, m.servings, m.created_by, m.created_at, m.updated_at, r.name AS recipe_title, r.image_url AS recipe_cover_url FROM meal_plan_entries m JOIN recipes r ON r.household_id = m.household_id AND r.id = m.recipe_id';
+        return 'SELECT m.id, m.household_id, m.recipe_id, m.meal_date, m.meal_type, m.servings, m.created_by, m.created_at, m.updated_at, r.name AS recipe_title, r.image_url AS recipe_cover_url FROM jarvis_meal_plan_entries m JOIN jarvis_recipes r ON r.household_id = m.household_id AND r.id = m.recipe_id';
     }
 
     /** @param array<string,mixed> $row @return array<string,mixed> */

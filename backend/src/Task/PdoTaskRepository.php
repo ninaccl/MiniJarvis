@@ -16,7 +16,7 @@ final class PdoTaskRepository implements TaskRepository
 
     public function lockHousehold(int $householdId): void
     {
-        $statement = $this->pdo->prepare('SELECT id FROM households WHERE id = :id FOR UPDATE');
+        $statement = $this->pdo->prepare('SELECT id FROM jarvis_households WHERE id = :id FOR UPDATE');
         $statement->execute(['id' => $householdId]);
         $statement->fetchColumn();
     }
@@ -57,7 +57,7 @@ final class PdoTaskRepository implements TaskRepository
     public function createTask(int $householdId, int $creatorUserId, array $task): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO tasks (household_id, title, due_at, parent_id, assigned_household_id, assigned_to, created_by) '
+            'INSERT INTO jarvis_tasks (household_id, title, due_at, parent_id, assigned_household_id, assigned_to, created_by) '
             . 'VALUES (:household_id, :title, :due_at, :parent_id, :assigned_household_id, :assigned_to, :created_by)'
         );
         $statement->execute([
@@ -86,14 +86,14 @@ final class PdoTaskRepository implements TaskRepository
         }
         if ($sets === []) return;
         $sets[] = 'updated_at = CURRENT_TIMESTAMP(6)';
-        $statement = $this->pdo->prepare('UPDATE tasks SET ' . implode(', ', $sets) . ' WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('UPDATE jarvis_tasks SET ' . implode(', ', $sets) . ' WHERE household_id = :household_id AND id = :id');
         $statement->execute($params);
     }
 
     public function setStatus(int $householdId, int $taskId, string $status): void
     {
         $statement = $this->pdo->prepare(
-            "UPDATE tasks SET status = :status, completed_at = IF(:completion_status = 'completed', CURRENT_TIMESTAMP(6), NULL), updated_at = CURRENT_TIMESTAMP(6) "
+            "UPDATE jarvis_tasks SET status = :status, completed_at = IF(:completion_status = 'completed', CURRENT_TIMESTAMP(6), NULL), updated_at = CURRENT_TIMESTAMP(6) "
             . 'WHERE household_id = :household_id AND id = :id'
         );
         $statement->execute(['status' => $status, 'completion_status' => $status, 'household_id' => $householdId, 'id' => $taskId]);
@@ -102,7 +102,7 @@ final class PdoTaskRepository implements TaskRepository
     public function setChildrenStatus(int $householdId, int $parentId, string $status): void
     {
         $statement = $this->pdo->prepare(
-            "UPDATE tasks SET status = :status, completed_at = IF(:completion_status = 'completed', CURRENT_TIMESTAMP(6), NULL), updated_at = CURRENT_TIMESTAMP(6) "
+            "UPDATE jarvis_tasks SET status = :status, completed_at = IF(:completion_status = 'completed', CURRENT_TIMESTAMP(6), NULL), updated_at = CURRENT_TIMESTAMP(6) "
             . 'WHERE household_id = :household_id AND parent_id = :parent_id'
         );
         $statement->execute(['status' => $status, 'completion_status' => $status, 'household_id' => $householdId, 'parent_id' => $parentId]);
@@ -119,14 +119,14 @@ final class PdoTaskRepository implements TaskRepository
 
     public function hasChildren(int $householdId, int $taskId): bool
     {
-        $statement = $this->pdo->prepare('SELECT 1 FROM tasks WHERE household_id = :household_id AND parent_id = :id LIMIT 1');
+        $statement = $this->pdo->prepare('SELECT 1 FROM jarvis_tasks WHERE household_id = :household_id AND parent_id = :id LIMIT 1');
         $statement->execute(['household_id' => $householdId, 'id' => $taskId]);
         return $statement->fetchColumn() !== false;
     }
 
     public function deleteTask(int $householdId, int $taskId): bool
     {
-        $statement = $this->pdo->prepare('DELETE FROM tasks WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('DELETE FROM jarvis_tasks WHERE household_id = :household_id AND id = :id');
         $statement->execute(['household_id' => $householdId, 'id' => $taskId]);
         return $statement->rowCount() === 1;
     }
@@ -134,7 +134,7 @@ final class PdoTaskRepository implements TaskRepository
     private function select(): string
     {
         return 'SELECT t.id, t.household_id, t.title, t.status, t.due_at, t.parent_id, t.assigned_to AS assignee_user_id, '
-            . 't.created_by, t.completed_at, t.created_at, t.updated_at FROM tasks t';
+            . 't.created_by, t.completed_at, t.created_at, t.updated_at FROM jarvis_tasks t';
     }
 
     /** @param array<string,mixed> $row @return array<string,mixed> */
