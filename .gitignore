@@ -13,3 +13,4 @@ miniprogram/node_modules/
 miniprogram/project.config.json
 miniprogram/project.private.config.json
 docs/superpowers/
+.worktrees/
