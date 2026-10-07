@@ -84,6 +84,15 @@ Page({
     finally { this.setData({ working: false }); }
   },
 
+  copyInvite() {
+    if (!this.data.inviteCode) return;
+    wx.setClipboardData({
+      data: this.data.inviteCode,
+      success: () => wx.showToast({ title: '邀请码已复制', icon: 'success' }),
+      fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }),
+    });
+  },
+
   async removeMember(event) {
     const member = event.currentTarget.dataset.member;
     if (!member || !(await confirm(`确定移除 ${member.nickname || '该成员'} 吗？`))) return;
