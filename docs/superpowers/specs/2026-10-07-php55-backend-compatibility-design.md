@@ -24,6 +24,8 @@ The existing database schema and its MySQL 8 requirement remain unchanged unless
 
 The hosting account also serves an older site. Limit deployment changes to `/htdocs/backend`; do not change the host-wide PHP version or other site files. Preserve the user's existing `.env`, uploads, and live data. Production deployment requires a separate review after the source port passes local checks.
 
+`qxu1192270195.my3w.com` is the temporary FTP host address; `www.sunhx.cn` is the public production domain. Verify public HTTP endpoints through `www.sunhx.cn`, while using the temporary host only for FTP access.
+
 ## Verification and acceptance
 
 1. Lint every production PHP file with PHP 5.5.30 and PHP 8.2.
