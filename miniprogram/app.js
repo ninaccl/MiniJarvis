@@ -30,14 +30,14 @@ App({
     });
   },
 
-  login({ route = false } = {}) {
+  login({ route = false, profile = null } = {}) {
     if (this._loginPromise) return this._loginPromise;
     this._loginPromise = (async () => {
       const prior = this.globalData.session.get();
       const result = await this.globalData.api.post('/auth/wechat', {
         code: this.globalData.config.localLoginCode || await wxLogin(),
-        nickname: prior && prior.user ? prior.user.nickname : undefined,
-        avatar_url: prior && prior.user ? prior.user.avatar_url : undefined,
+        nickname: profile && profile.nickname != null ? profile.nickname : prior && prior.user ? prior.user.nickname : undefined,
+        avatar_url: profile && profile.avatar_url != null ? profile.avatar_url : prior && prior.user ? prior.user.avatar_url : undefined,
       }, { includeAuth: false, includeHousehold: false, retryAuth: false });
       this.globalData.session.set({ token: result.access_token, user: result.user, household: prior && prior.household });
       await this.refreshHousehold();

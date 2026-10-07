@@ -1,5 +1,6 @@
 const { ApiError } = require('../../services/api');
 const { subscriptionTemplate } = require('../../utils/subscriptions');
+const { mediaUrl } = require('../../utils/feature-page');
 
 function app() { return getApp(); }
 function confirm(content) {
@@ -7,7 +8,7 @@ function confirm(content) {
 }
 
 Page({
-  data: { loading: true, error: '', household: null, households: [], members: [], preferences: { task_due: false, inventory_expiry: false }, inviteCode: '', working: false },
+  data: { loading: true, error: '', household: null, households: [], members: [], preferences: { task_due: false, inventory_expiry: false }, inviteCode: '', profileNickname: '', profileAvatar: '', profileAvatarFile: '', working: false },
 
   onShow() { this.load(); },
 
@@ -21,13 +22,18 @@ Page({
         app().globalData.api.get('/notifications/preferences'),
         app().globalData.api.get('/households', { includeHousehold: false }),
       ]);
-      const members = (current.members || []).map((member) => ({
-        ...member,
-        avatar: member.nickname ? String(member.nickname).slice(0, 1) : '我',
-      }));
+      const members = (current.members || []).map((member) => {
+        const nickname = String(member.nickname || '').trim();
+        return {
+          ...member,
+          displayName: nickname || `成员 ${member.user_id}`,
+          avatarInitial: nickname ? Array.from(nickname)[0] : String(member.user_id).slice(-2),
+          avatarUrl: member.avatar_url ? mediaUrl(member.avatar_url) : '',
+        };
+      });
       app().globalData.members = members;
       app().globalData.session.patch({ household: current.household });
-      this.setData({ household: current.household, households: listed.households || [], members, preferences, inviteCode: app().globalData.initialInviteCode || '', loading: false });
+      this.setData({ household: current.household, households: listed.households || [], members, preferences, inviteCode: app().globalData.initialInviteCode || '', profileNickname: session.user && session.user.nickname || '', profileAvatar: session.user && session.user.avatar_url ? mediaUrl(session.user.avatar_url) : '', profileAvatarFile: '', loading: false });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'HOUSEHOLD_MEMBERSHIP_REQUIRED') {
         try {
@@ -40,6 +46,51 @@ Page({
   },
 
   addHousehold() { wx.navigateTo({ url: '/pages/onboarding/index?from=settings' }); },
+
+  chooseAvatar(event) {
+    const avatarUrl = event.detail && event.detail.avatarUrl;
+    if (!avatarUrl) return;
+    this.setData({ profileAvatar: avatarUrl, profileAvatarFile: avatarUrl });
+    return this.saveProfile({ allowEmptyNickname: true, silent: true });
+  },
+
+  editNickname(event) { this.setData({ profileNickname: event.detail.value }); },
+
+  confirmNickname(event) {
+    const nickname = String(event.detail && event.detail.value || '').trim();
+    if (!nickname) return;
+    this.setData({ profileNickname: nickname });
+    return this.saveProfile({ silent: true });
+  },
+
+  saveProfile(options = {}) {
+    const { allowEmptyNickname = false, silent = false } = options;
+    const nickname = String(this.data.profileNickname || '').trim();
+    const avatarFile = this.data.profileAvatarFile;
+    if (!nickname && !allowEmptyNickname) return wx.showToast({ title: '请选用微信昵称', icon: 'none' });
+    const persist = async () => {
+      this.setData({ working: true });
+      try {
+        const current = app().globalData.session.get().user;
+        if (nickname === String(current.nickname || '') && (!avatarFile || avatarFile === this._lastUploadedFile)) return;
+        let avatarUrl = current.avatar_url;
+        if (avatarFile && avatarFile !== this._lastUploadedFile) {
+          const uploaded = await app().globalData.api.upload('/uploads/images', avatarFile);
+          avatarUrl = mediaUrl(uploaded.url);
+          this._lastUploadedFile = avatarFile;
+          this._lastUploadedUrl = avatarUrl;
+        } else if (avatarFile && avatarFile === this._lastUploadedFile) {
+          avatarUrl = this._lastUploadedUrl || avatarUrl;
+        }
+        await app().login({ route: false, profile: { nickname, avatar_url: avatarUrl } });
+        await this.load();
+        if (!silent) wx.showToast({ title: '资料已保存', icon: 'success' });
+      } catch (error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
+      finally { this.setData({ working: false }); }
+    };
+    this._profileSaveQueue = (this._profileSaveQueue || Promise.resolve()).then(persist, persist);
+    return this._profileSaveQueue;
+  },
 
   async switchHousehold(event) {
     const household = this.data.households.find((item) => item.id === Number(event.currentTarget.dataset.id));
