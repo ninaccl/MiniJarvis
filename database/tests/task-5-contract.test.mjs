@@ -10,9 +10,9 @@ const config = read('backend/src/Config/Config.php');
 const schema = read('database/init.sql').replace(/\s+/g, ' ');
 
 function table(name) {
-  const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${name} \\((.*?)\\) ENGINE=InnoDB;`));
+  const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS jarvis_${name} \\((.*?)\\) ENGINE=InnoDB;`));
   assert.ok(match, `missing table ${name}`);
-  return match[1];
+  return match[1].replaceAll('jarvis_', '');
 }
 
 test('task and notification routes are authenticated and composed', () => {
@@ -33,7 +33,7 @@ test('notification persistence exposes idempotent events and exact delivery stat
   const jobs = table('notification_jobs');
   assert.match(jobs, /event_key VARCHAR\(191\).*NOT NULL/);
   assert.match(jobs, /UNIQUE KEY uq_notification_jobs_event_key \(event_key\)/);
-  assert.match(jobs, /scheduled_at TIMESTAMP\(6\) NOT NULL/);
+  assert.match(jobs, /scheduled_at DATETIME\(6\) NOT NULL/);
   assert.match(jobs, /status IN \('pending', 'sending', 'sent', 'permanent_failed', 'cancelled'\)/);
   assert.match(jobs, /payload_snapshot JSON NOT NULL/);
 
@@ -56,7 +56,7 @@ test('reminder implementation contains concurrency-safe claim, retry, stale-job,
   const service = read('backend/src/Notification/ReminderService.php');
   const taskService = read('backend/src/Task/TaskService.php');
 
-  assert.match(repository, /FOR UPDATE SKIP LOCKED/);
+  assert.match(repository, /ORDER BY j\.scheduled_at, j\.id LIMIT 1 FOR UPDATE/);
   assert.match(repository, /status = 'available'.*FOR UPDATE/s);
   assert.match(service, /attempts.*>= 3/s);
   assert.match(service, /skipped_no_grant/);

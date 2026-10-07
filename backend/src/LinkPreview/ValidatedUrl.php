@@ -1,17 +1,19 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\LinkPreview;
 
 final class ValidatedUrl
 {
+    public $url;
+    public $host;
+    public $platform;
+    public $addresses;
     /** @param list<string> $addresses */
-    public function __construct(
-        public readonly string $url,
-        public readonly string $host,
-        public readonly string $platform,
-        public readonly array $addresses,
-    ) {
+    public function __construct($url, $host, $platform, array $addresses)
+    {
+        $this->url = $url;
+        $this->host = $host;
+        $this->platform = $platform;
+        $this->addresses = $addresses;
     }
 }

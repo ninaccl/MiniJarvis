@@ -1,24 +1,22 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Shopping;
 
 interface ShoppingListRepository
 {
     /** @param array<string,mixed> $selectionSnapshot */
-    public function createList(int $householdId, int $userId, string $name, array $selectionSnapshot): int;
+    public function createList($householdId, $userId, $name, array $selectionSnapshot);
     /** @param array<string,mixed> $item */
-    public function addItem(int $householdId, int $listId, array $item): int;
+    public function addItem($householdId, $listId, array $item);
     /** @return array{items:list<array<string,mixed>>,total:int} */
-    public function list(int $householdId, int $limit, int $offset): array;
+    public function listItems($householdId, $limit, $offset);
     /** @return array<string,mixed>|null */
-    public function findList(int $householdId, int $listId): ?array;
+    public function findList($householdId, $listId);
     /** @return list<array<string,mixed>> */
-    public function items(int $householdId, int $listId): array;
+    public function items($householdId, $listId);
     /** @return array<string,mixed>|null */
-    public function findItem(int $householdId, int $listId, int $itemId, bool $forUpdate = false): ?array;
-    public function setChecked(int $householdId, int $listId, int $itemId, int $userId, bool $checked): bool;
-    public function updateStatus(int $householdId, int $listId, string $status): bool;
-    public function markStocked(int $householdId, int $listId, int $itemId, int $userId, int $batchId): bool;
+    public function findItem($householdId, $listId, $itemId, $forUpdate = false);
+    public function setChecked($householdId, $listId, $itemId, $userId, $checked);
+    public function updateStatus($householdId, $listId, $status);
+    public function markStocked($householdId, $listId, $itemId, $userId, $batchId);
 }

@@ -1,25 +1,23 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http;
 
-use Throwable;
-
+use Exception;
 final class ApiKernel
 {
-    public function __construct(private readonly Router $router)
+    private $router;
+    public function __construct(Router $router)
     {
+        $this->router = $router;
     }
-
-    public function handle(Request $request): Response
+    public function handle(Request $request)
     {
         try {
             return $this->router->dispatch($request);
         } catch (ApiException $exception) {
             return Response::fromException($exception);
-        } catch (Throwable $exception) {
-            error_log(sprintf('%s: %s', $exception::class, $exception->getMessage()));
+        } catch (Exception $exception) {
+            error_log(sprintf('%s: %s', get_class($exception), $exception->getMessage()));
             return Response::internalError();
         }
     }

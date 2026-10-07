@@ -1,12 +1,10 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Support;
 
 final class Text
 {
-    public static function length(string $value): int
+    public static function length($value)
     {
         if (function_exists('mb_strlen')) {
             return mb_strlen($value, 'UTF-8');
@@ -17,7 +15,7 @@ final class Text
         return $count === false ? strlen($value) : $count;
     }
 
-    public static function truncate(string $value, int $characters): string
+    public static function truncate($value, $characters)
     {
         if (function_exists('mb_substr')) return mb_substr($value, 0, $characters, 'UTF-8');
         $matches = [];

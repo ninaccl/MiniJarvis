@@ -1,11 +1,17 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http;
 
 final class Request
 {
+    private $method;
+    private $path;
+    private $headers;
+    private $query;
+    private $body;
+    private $attributes;
+    private $routeParams;
+    private $files;
     /**
      * @param array<string, string> $headers
      * @param array<string, string> $query
@@ -14,26 +20,25 @@ final class Request
      * @param array<string, string> $routeParams
      * @param array<string, array<string, mixed>> $files
      */
-    public function __construct(
-        private readonly string $method,
-        private readonly string $path,
-        private readonly array $headers = [],
-        private readonly array $query = [],
-        private readonly ?array $body = null,
-        private readonly array $attributes = [],
-        private readonly array $routeParams = [],
-        private readonly array $files = [],
-    ) {
-    }
-
-    public static function fromGlobals(): self
+    public function __construct($method, $path, array $headers = [], array $query = [], $body = null, array $attributes = [], array $routeParams = [], array $files = [])
     {
-        $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-        $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        $this->method = $method;
+        $this->path = $path;
+        $this->headers = $headers;
+        $this->query = $query;
+        $this->body = $body;
+        $this->attributes = $attributes;
+        $this->routeParams = $routeParams;
+        $this->files = $files;
+    }
+    public static function fromGlobals()
+    {
+        $method = strtoupper((string) (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET'));
+        $uri = (string) (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/');
         $path = rawurldecode((string) (parse_url($uri, PHP_URL_PATH) ?: '/'));
         $headers = [];
         foreach ($_SERVER as $key => $value) {
-            if (str_starts_with($key, 'HTTP_')) {
+            if (\App\Support\Compat::startsWith($key, 'HTTP_')) {
                 $name = strtolower(str_replace('_', '-', substr($key, 5)));
                 $headers[$name] = (string) $value;
             }
@@ -44,41 +49,38 @@ final class Request
         if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
             $headers['authorization'] = (string) $_SERVER['HTTP_AUTHORIZATION'];
         }
-
         $body = null;
         $rawBody = file_get_contents('php://input');
-        $contentType = strtolower($headers['content-type'] ?? '');
-        if ($rawBody !== false && trim($rawBody) !== '' && str_starts_with($contentType, 'application/json')) {
+        $contentType = strtolower(isset($headers['content-type']) ? $headers['content-type'] : '');
+        if ($rawBody !== false && trim($rawBody) !== '' && \App\Support\Compat::startsWith($contentType, 'application/json')) {
             try {
-                $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException) {
+                $decoded = \App\Support\Compat::jsonDecode($rawBody);
+            } catch (\RuntimeException $ignored) {
                 throw new ApiException(422, 'INVALID_JSON', 'Request body must be valid JSON.');
             }
-            if (!is_array($decoded) || !str_starts_with(ltrim($rawBody), '{')) {
+            if (!is_array($decoded) || !\App\Support\Compat::startsWith(ltrim($rawBody), '{')) {
                 throw new ApiException(422, 'INVALID_JSON', 'Request body must be a JSON object.');
             }
             $body = $decoded;
         }
-
         /** @var array<string, string> $query */
-        $query = array_map(static fn (mixed $value): string => (string) $value, $_GET);
+        $query = array_map(static function ($value) {
+            return (string) $value;
+        }, $_GET);
         /** @var array<string, array<string, mixed>> $files */
         $files = $_FILES;
         return new self($method, $path, $headers, $query, $body, [], [], $files);
     }
-
-    public function method(): string
+    public function method()
     {
         return strtoupper($this->method);
     }
-
-    public function path(): string
+    public function path()
     {
         $normalized = '/' . ltrim($this->path, '/');
         return $normalized === '/' ? '/' : rtrim($normalized, '/');
     }
-
-    public function header(string $name): ?string
+    public function header($name)
     {
         foreach ($this->headers as $header => $value) {
             if (strtolower($header) === strtolower($name)) {
@@ -87,60 +89,37 @@ final class Request
         }
         return null;
     }
-
     /** @return array<string, mixed> */
-    public function json(): array
+    public function json()
     {
-        return $this->body ?? [];
+        return isset($this->body) ? $this->body : [];
     }
-
-    public function query(string $name, ?string $default = null): ?string
+    public function query($name, $default = null)
     {
-        return $this->query[$name] ?? $default;
+        return isset($this->query[$name]) ? $this->query[$name] : $default;
     }
-
-    public function attribute(string $name): mixed
+    public function attribute($name)
     {
-        return $this->attributes[$name] ?? null;
+        return isset($this->attributes[$name]) ? $this->attributes[$name] : null;
     }
-
-    public function routeParam(string $name): ?string
+    public function routeParam($name)
     {
-        return $this->routeParams[$name] ?? null;
+        return isset($this->routeParams[$name]) ? $this->routeParams[$name] : null;
     }
-
     /** @return array<string,mixed>|null */
-    public function file(string $name): ?array
+    public function file($name)
     {
-        return $this->files[$name] ?? null;
+        return isset($this->files[$name]) ? $this->files[$name] : null;
     }
-
-    public function withAttribute(string $name, mixed $value): self
+    public function withAttribute($name, $value)
     {
-        return new self(
-            $this->method,
-            $this->path,
-            $this->headers,
-            $this->query,
-            $this->body,
-            [...$this->attributes, $name => $value],
-            $this->routeParams,
-            $this->files,
-        );
+        $attributes = $this->attributes;
+        $attributes[$name] = $value;
+        return new self($this->method, $this->path, $this->headers, $this->query, $this->body, $attributes, $this->routeParams, $this->files);
     }
-
     /** @param array<string, string> $routeParams */
-    public function withRouteParams(array $routeParams): self
+    public function withRouteParams(array $routeParams)
     {
-        return new self(
-            $this->method,
-            $this->path,
-            $this->headers,
-            $this->query,
-            $this->body,
-            $this->attributes,
-            $routeParams,
-            $this->files,
-        );
+        return new self($this->method, $this->path, $this->headers, $this->query, $this->body, $this->attributes, $routeParams, $this->files);
     }
 }

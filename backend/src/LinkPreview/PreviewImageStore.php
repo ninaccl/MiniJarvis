@@ -1,16 +1,14 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\LinkPreview;
 
 interface PreviewImageStore
 {
     /** @return array{path:string} */
-    public function storeTemporary(string $bytes, string $extension): array;
-    public function readTemporary(string $temporaryPath): string;
+    public function storeTemporary($bytes, $extension);
+    public function readTemporary($temporaryPath);
     /** @return array{path:string,url:string} */
-    public function stageAdoption(string $temporaryPath): array;
-    public function deleteTemporary(string $temporaryPath): void;
-    public function removePermanent(string $permanentPath): void;
+    public function stageAdoption($temporaryPath);
+    public function deleteTemporary($temporaryPath);
+    public function removePermanent($permanentPath);
 }

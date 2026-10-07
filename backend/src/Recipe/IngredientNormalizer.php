@@ -1,12 +1,10 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Recipe;
 
 final class IngredientNormalizer
 {
-    public static function normalize(string $name): string
+    public static function normalize($name)
     {
         $collapsed = preg_replace('/\s+/u', ' ', trim($name));
         $collapsed = $collapsed === null ? trim($name) : $collapsed;

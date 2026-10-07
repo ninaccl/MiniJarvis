@@ -8,9 +8,9 @@ const backendReadme = readFileSync(new URL('../../backend/README.md', import.met
 const databaseReadme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
 function table(name) {
-  const match = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${name} \\((.*?)\\) ENGINE=InnoDB;`));
+  const match = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS jarvis_${name} \\((.*?)\\) ENGINE=InnoDB;`));
   assert.ok(match, `missing table ${name}`);
-  return match[1];
+  return match[1].replaceAll('jarvis_', '');
 }
 
 test('tenant-owned parent references use composite household foreign keys', () => {
@@ -107,7 +107,7 @@ test('link previews persist opaque ownership expiry and single-adoption state', 
   assert.match(definition, /user_id BIGINT UNSIGNED NOT NULL/);
   assert.match(definition, /token_hash CHAR\(64\).*NOT NULL/);
   assert.match(definition, /UNIQUE KEY uq_link_previews_token_hash \(token_hash\)/);
-  assert.match(definition, /expires_at TIMESTAMP\(6\) NOT NULL/);
+  assert.match(definition, /expires_at DATETIME\(6\) NOT NULL/);
   assert.match(definition, /adopted_at TIMESTAMP\(6\) NULL/);
   assert.match(definition, /image_mime_type VARCHAR\(32\).*NULL/);
   assert.match(definition, /FOREIGN KEY \(household_id, user_id\) REFERENCES household_members \(household_id, user_id\)/);

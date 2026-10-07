@@ -1,31 +1,23 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Household;
 
 use PDOException;
-
 final class PdoConstraintMapper
 {
-    public static function rethrow(PDOException $exception): never
+    public static function rethrow(PDOException $exception)
     {
-        $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
-        $driverCode = (int) ($exception->errorInfo[1] ?? 0);
-        $details = (string) ($exception->errorInfo[2] ?? '') . ' ' . $exception->getMessage();
-
+        $sqlState = (string) (isset($exception->errorInfo[0]) ? $exception->errorInfo[0] : $exception->getCode());
+        $driverCode = (int) (isset($exception->errorInfo[1]) ? $exception->errorInfo[1] : 0);
+        $details = (string) (isset($exception->errorInfo[2]) ? $exception->errorInfo[2] : '') . ' ' . $exception->getMessage();
         if ($sqlState === '23000' && $driverCode === 1062) {
-            if (
-                str_contains($details, 'uq_household_members_user')
-                || str_contains($details, 'uq_household_members_household_user')
-            ) {
+            if (strpos($details, 'uq_household_members_user') !== false || strpos($details, 'uq_household_members_household_user') !== false) {
                 throw new MembershipAlreadyExists('The user already belongs to a household.', 0, $exception);
             }
-            if (str_contains($details, 'uq_households_invite_hash')) {
+            if (strpos($details, 'uq_households_invite_hash') !== false) {
                 throw new InviteCodeCollision('The generated invite code collided.', 0, $exception);
             }
         }
-
         throw $exception;
     }
 }

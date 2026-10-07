@@ -1,40 +1,35 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Household;
 
 use App\Auth\AuthContext;
 use App\Database\TransactionManager;
 use App\Http\ApiException;
 use App\Support\Text;
-
 final class HouseholdService
 {
-    private const INVITE_ATTEMPTS = 10;
-
-    public function __construct(
-        private readonly TransactionManager $transactions,
-        private readonly HouseholdStore $households,
-        private readonly TenantGuard $guard,
-    ) {
+    private $transactions;
+    private $households;
+    private $guard;
+    const INVITE_ATTEMPTS = 10;
+    public function __construct(TransactionManager $transactions, HouseholdStore $households, TenantGuard $guard)
+    {
+        $this->transactions = $transactions;
+        $this->households = $households;
+        $this->guard = $guard;
     }
-
     /** @return array{household:array<string,mixed>,invite_code:string} */
-    public function create(AuthContext $context, string $name): array
+    public function create(AuthContext $context, $name)
     {
         $name = trim($name);
         if ($name === '' || Text::length($name) > 120) {
-            throw new ApiException(422, 'VALIDATION_FAILED', 'Household name is invalid.', [
-                'name' => $name === '' ? 'Required.' : 'Maximum length is 120 characters.',
-            ]);
+            throw new ApiException(422, 'VALIDATION_FAILED', 'Household name is invalid.', ['name' => $name === '' ? 'Required.' : 'Maximum length is 120 characters.']);
         }
-
         for ($attempt = 0; $attempt < self::INVITE_ATTEMPTS; $attempt++) {
             try {
-                return $this->transactions->transaction(function () use ($context, $name): array {
+                return $this->transactions->transaction(function () use ($context, $name) {
                     $this->ensureNotMember($context->userId);
-                    [$inviteCode, $inviteHash] = $this->newInviteCandidate();
+                    list($inviteCode, $inviteHash) = $this->newInviteCandidate();
                     if ($this->households->inviteHashExists($inviteHash)) {
                         throw new InviteCodeCollision();
                     }
@@ -42,26 +37,23 @@ final class HouseholdService
                     $household = $this->presentHousehold($this->requireHousehold($id), 'owner');
                     return ['household' => $household, 'invite_code' => $inviteCode];
                 });
-            } catch (InviteCodeCollision) {
+            } catch (InviteCodeCollision $ignored) {
                 continue;
-            } catch (MembershipAlreadyExists) {
+            } catch (MembershipAlreadyExists $ignored) {
                 throw $this->alreadyJoined();
             }
         }
-
         throw new ApiException(409, 'HOUSEHOLD_INVITE_CONFLICT', 'A unique invite code could not be allocated.');
     }
-
     /** @return array{household:array<string,mixed>} */
-    public function join(AuthContext $context, string $inviteCode): array
+    public function join(AuthContext $context, $inviteCode)
     {
         $inviteCode = InviteCode::normalize($inviteCode);
         if (!InviteCode::isValid($inviteCode)) {
             throw new ApiException(422, 'HOUSEHOLD_INVALID_INVITE', 'The invite code is invalid.');
         }
-
         try {
-            return $this->transactions->transaction(function () use ($context, $inviteCode): array {
+            return $this->transactions->transaction(function () use ($context, $inviteCode) {
                 $this->ensureNotMember($context->userId);
                 $household = $this->households->householdByInviteHash(InviteCode::hash($inviteCode));
                 if ($household === null) {
@@ -70,45 +62,38 @@ final class HouseholdService
                 $this->households->addMember((int) $household['id'], $context->userId);
                 return ['household' => $this->presentHousehold($household, 'member')];
             });
-        } catch (MembershipAlreadyExists) {
+        } catch (MembershipAlreadyExists $ignored) {
             throw $this->alreadyJoined();
         }
     }
-
     /** @return array{household:array<string,mixed>,members:list<array<string,mixed>>} */
-    public function current(AuthContext $context): array
+    public function current(AuthContext $context)
     {
         $householdId = $this->guard->requireMembership($context);
         $household = $this->requireHousehold($householdId);
-        return [
-            'household' => $this->presentHousehold($household, (string) $context->role),
-            'members' => $this->households->members($householdId),
-        ];
+        return ['household' => $this->presentHousehold($household, (string) $context->role), 'members' => $this->households->members($householdId)];
     }
-
     /** @return array{invite_code:string} */
-    public function resetInvite(AuthContext $context): array
+    public function resetInvite(AuthContext $context)
     {
         $householdId = $this->guard->requireOwner($context);
         for ($attempt = 0; $attempt < self::INVITE_ATTEMPTS; $attempt++) {
             try {
-                return $this->transactions->transaction(function () use ($householdId): array {
-                    [$inviteCode, $inviteHash] = $this->newInviteCandidate();
+                return $this->transactions->transaction(function () use ($householdId) {
+                    list($inviteCode, $inviteHash) = $this->newInviteCandidate();
                     if ($this->households->inviteHashExists($inviteHash)) {
                         throw new InviteCodeCollision();
                     }
                     $this->households->replaceInviteHash($householdId, $inviteHash);
                     return ['invite_code' => $inviteCode];
                 });
-            } catch (InviteCodeCollision) {
+            } catch (InviteCodeCollision $ignored) {
                 continue;
             }
         }
-
         throw new ApiException(409, 'HOUSEHOLD_INVITE_CONFLICT', 'A unique invite code could not be allocated.');
     }
-
-    public function removeMember(AuthContext $context, int $userId): void
+    public function removeMember(AuthContext $context, $userId)
     {
         $householdId = $this->guard->requireOwner($context);
         $member = $this->households->member($householdId, $userId);
@@ -118,34 +103,30 @@ final class HouseholdService
         if ($member['role'] === 'owner') {
             throw new ApiException(409, 'HOUSEHOLD_OWNER_REMOVAL_FORBIDDEN', 'The household owner cannot be removed.');
         }
-        $this->transactions->transaction(function () use ($householdId, $userId): void {
+        $this->transactions->transaction(function () use ($householdId, $userId) {
             if (!$this->households->removeMember($householdId, $userId)) {
                 throw new ApiException(404, 'HOUSEHOLD_MEMBER_NOT_FOUND', 'The household member was not found.');
             }
         });
     }
-
-    private function ensureNotMember(int $userId): void
+    private function ensureNotMember($userId)
     {
         if ($this->households->membershipForUser($userId) !== null) {
             throw $this->alreadyJoined();
         }
     }
-
     /** @return array{string,string} */
-    private function newInviteCandidate(): array
+    private function newInviteCandidate()
     {
         $code = InviteCode::generate();
         return [$code, InviteCode::hash($code)];
     }
-
-    private function alreadyJoined(): ApiException
+    private function alreadyJoined()
     {
         return new ApiException(409, 'HOUSEHOLD_ALREADY_JOINED', 'The user already belongs to a household.');
     }
-
     /** @return array{id:int,name:string,owner_user_id:int,invite_code_hash:string} */
-    private function requireHousehold(int $id): array
+    private function requireHousehold($id)
     {
         $household = $this->households->household($id);
         if ($household === null) {
@@ -153,15 +134,9 @@ final class HouseholdService
         }
         return $household;
     }
-
     /** @param array{id:int,name:string,owner_user_id:int,invite_code_hash:string} $household @return array{id:int,name:string,owner_user_id:int,role:string} */
-    private function presentHousehold(array $household, string $role): array
+    private function presentHousehold(array $household, $role)
     {
-        return [
-            'id' => (int) $household['id'],
-            'name' => (string) $household['name'],
-            'owner_user_id' => (int) $household['owner_user_id'],
-            'role' => $role,
-        ];
+        return ['id' => (int) $household['id'], 'name' => (string) $household['name'], 'owner_user_id' => (int) $household['owner_user_id'], 'role' => $role];
     }
 }

@@ -1,17 +1,15 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\LinkPreview;
 
 interface LinkPreviewRepository
 {
     /** @param array<string,mixed> $preview */
-    public function create(array $preview): int;
+    public function create(array $preview);
     /** @return array<string,mixed>|null */
-    public function findForAdoption(string $tokenHash, int $householdId, int $userId): ?array;
+    public function findForAdoption($tokenHash, $householdId, $userId);
     /** @return array<string,mixed>|null */
-    public function findForImage(string $tokenHash, int $householdId, int $userId): ?array;
-    public function markAdopted(int $id, string $adoptedAt, string $publicUrl): bool;
-    public function clearTemporaryPath(int $id): void;
+    public function findForImage($tokenHash, $householdId, $userId);
+    public function markAdopted($id, $adoptedAt, $publicUrl);
+    public function clearTemporaryPath($id);
 }

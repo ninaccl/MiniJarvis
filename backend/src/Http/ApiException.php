@@ -1,35 +1,31 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http;
 
 use RuntimeException;
-
 final class ApiException extends RuntimeException
 {
+    private $status;
+    private $errorCode;
+    private $fields;
     /** @param array<string, string> $fields */
-    public function __construct(
-        private readonly int $status,
-        private readonly string $errorCode,
-        string $message,
-        private readonly array $fields = [],
-    ) {
+    public function __construct($status, $errorCode, $message, array $fields = [])
+    {
+        $this->status = $status;
+        $this->errorCode = $errorCode;
+        $this->fields = $fields;
         parent::__construct($message, $status);
     }
-
-    public function status(): int
+    public function status()
     {
         return $this->status;
     }
-
-    public function errorCode(): string
+    public function errorCode()
     {
         return $this->errorCode;
     }
-
     /** @return array<string, string> */
-    public function fields(): array
+    public function fields()
     {
         return $this->fields;
     }

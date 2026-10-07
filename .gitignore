@@ -2,6 +2,7 @@
 .env
 backend/.env
 backend/vendor/
+backend/vendor
 backend/.phpunit.cache/
 backend/coverage/
 *.log

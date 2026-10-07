@@ -1,23 +1,21 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Inventory;
 
 interface InventoryRepository
 {
     /** @return list<array<string,mixed>> */
-    public function listBatches(int $householdId, string $query): array;
+    public function listBatches($householdId, $query);
     /** @return array<string,mixed>|null */
-    public function findBatch(int $householdId, int $batchId, bool $forUpdate = false): ?array;
+    public function findBatch($householdId, $batchId, $forUpdate = false);
     /** @param array<string,mixed> $batch */
-    public function createBatch(int $householdId, int $userId, array $batch): int;
-    public function updateBatchDetails(int $householdId, int $batchId, bool $hasExpiry, ?string $expiryDate, bool $hasNote, ?string $note): bool;
-    public function updateBatchQuantity(int $householdId, int $batchId, string $baseQuantity): bool;
+    public function createBatch($householdId, $userId, array $batch);
+    public function updateBatchDetails($householdId, $batchId, $hasExpiry, $expiryDate, $hasNote, $note);
+    public function updateBatchQuantity($householdId, $batchId, $baseQuantity);
     /** @param array<string,mixed> $movement */
-    public function appendMovement(int $householdId, int $userId, array $movement): int;
+    public function appendMovement($householdId, $userId, array $movement);
     /** @return array{items:list<array<string,mixed>>,total:int} */
-    public function listMovements(int $householdId, int $limit, int $offset): array;
+    public function listMovements($householdId, $limit, $offset);
     /** @return list<array<string,mixed>> */
-    public function availableBatches(int $householdId, string $today): array;
+    public function availableBatches($householdId, $today);
 }

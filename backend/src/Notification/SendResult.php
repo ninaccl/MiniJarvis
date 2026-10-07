@@ -1,16 +1,28 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Notification;
 
 final class SendResult
 {
-    private function __construct(public readonly bool $sent, public readonly bool $transient, public readonly string $error)
+    public $sent;
+    public $transient;
+    public $error;
+    private function __construct($sent, $transient, $error)
     {
+        $this->sent = $sent;
+        $this->transient = $transient;
+        $this->error = $error;
     }
-
-    public static function sent(): self { return new self(true, false, ''); }
-    public static function transient(string $error): self { return new self(false, true, $error); }
-    public static function permanent(string $error): self { return new self(false, false, $error); }
+    public static function sent()
+    {
+        return new self(true, false, '');
+    }
+    public static function transient($error)
+    {
+        return new self(false, true, $error);
+    }
+    public static function permanent($error)
+    {
+        return new self(false, false, $error);
+    }
 }
