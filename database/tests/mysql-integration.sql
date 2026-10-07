@@ -77,6 +77,8 @@ BEGIN
 
   INSERT INTO jarvis_household_members (household_id, user_id, role)
     VALUES (household_one, user_one, 'owner');
+  INSERT INTO jarvis_household_members (household_id, user_id, role)
+    VALUES (household_two, user_one, 'member');
 
   BEGIN
     DECLARE CONTINUE HANDLER FOR 1062 SET duplicate_membership_rejected = TRUE;
@@ -84,7 +86,7 @@ BEGIN
       VALUES (household_two, user_one, 'member');
   END;
   IF duplicate_membership_rejected = FALSE THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'schema integration: one user joined two jarvis_households';
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'schema integration: duplicate membership was accepted';
   END IF;
 
   INSERT INTO jarvis_household_members (household_id, user_id, role)

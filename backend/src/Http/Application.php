@@ -28,7 +28,10 @@ final class Application
         };
         $router->add('POST', '/api/v1/households', $protected([$householdController, 'create']));
         $router->add('POST', '/api/v1/households/join', $protected([$householdController, 'join']));
+        $router->add('GET', '/api/v1/households', $protected([$householdController, 'listItems']));
         $router->add('GET', '/api/v1/households/current', $protected([$householdController, 'current']));
+        $router->add('DELETE', '/api/v1/households/current/membership', $protected([$householdController, 'leave']));
+        $router->add('DELETE', '/api/v1/households/current', $protected([$householdController, 'dissolve']));
         $router->add('POST', '/api/v1/households/invite/reset', $protected([$householdController, 'resetInvite']));
         $router->add('DELETE', '/api/v1/households/members/{userId}', $protected([$householdController, 'removeMember']));
         if ($recipeController !== null) {

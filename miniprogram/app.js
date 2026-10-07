@@ -38,8 +38,8 @@ App({
         code: this.globalData.config.localLoginCode || await wxLogin(),
         nickname: prior && prior.user ? prior.user.nickname : undefined,
         avatar_url: prior && prior.user ? prior.user.avatar_url : undefined,
-      }, { includeAuth: false, retryAuth: false });
-      this.globalData.session.set({ token: result.access_token, user: result.user, household: null });
+      }, { includeAuth: false, includeHousehold: false, retryAuth: false });
+      this.globalData.session.set({ token: result.access_token, user: result.user, household: prior && prior.household });
       await this.refreshHousehold();
       if (route) this.routeForSession();
       return this.globalData.session.get();
@@ -48,6 +48,14 @@ App({
   },
 
   async refreshHousehold() {
+    const listed = await this.globalData.api.get('/households', { includeHousehold: false });
+    const households = listed.households || [];
+    const session = this.globalData.session.get();
+    const selected = session && session.household;
+    const household = households.find((item) => selected && item.id === selected.id) || households[0] || null;
+    this.globalData.households = households;
+    this.globalData.session.patch({ household });
+    if (!household) { this.globalData.members = []; return null; }
     try {
       const current = await this.globalData.api.get('/households/current');
       this.globalData.members = current.members || [];
@@ -59,6 +67,16 @@ App({
         this.globalData.session.patch({ household: null });
         return null;
       }
+      throw error;
+    }
+  },
+
+  async selectHousehold(household) {
+    const prior = this.globalData.session.get();
+    this.globalData.session.patch({ household });
+    try { return await this.refreshHousehold(); }
+    catch (error) {
+      this.globalData.session.patch({ household: prior && prior.household });
       throw error;
     }
   },

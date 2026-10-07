@@ -17,6 +17,12 @@ final class PdoHouseholdStore implements HouseholdStore
         $statement->execute(['user_id' => $userId]);
         return $this->memberRow($statement->fetch());
     }
+    public function householdsForUser($userId)
+    {
+        $statement = $this->pdo->prepare('SELECT h.id, h.name, h.owner_user_id, h.invite_code_hash, hm.role FROM jarvis_household_members hm JOIN jarvis_households h ON h.id = hm.household_id WHERE hm.user_id = :user_id ORDER BY h.id');
+        $statement->execute(['user_id' => $userId]);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
     public function inviteHashExists($inviteHash)
     {
         $statement = $this->pdo->prepare('SELECT 1 FROM jarvis_households WHERE invite_code_hash = :hash LIMIT 1');
@@ -91,6 +97,24 @@ final class PdoHouseholdStore implements HouseholdStore
         }
         $statement = $this->pdo->prepare("DELETE FROM jarvis_household_members WHERE household_id = :household_id AND user_id = :user_id AND role <> 'owner'");
         $statement->execute(['household_id' => $householdId, 'user_id' => $userId]);
+        return $statement->rowCount() === 1;
+    }
+    public function deleteHousehold($householdId)
+    {
+        $lock = $this->pdo->prepare('SELECT id FROM jarvis_households WHERE id = :id FOR UPDATE');
+        $lock->execute(['id' => $householdId]);
+        if ($lock->fetchColumn() === false) return false;
+        $tables = ['jarvis_notification_jobs', 'jarvis_notification_grants', 'jarvis_notification_preferences',
+            'jarvis_link_previews', 'jarvis_shopping_list_items', 'jarvis_shopping_lists', 'jarvis_tasks',
+            'jarvis_meal_plan_entries', 'jarvis_recipe_ingredients', 'jarvis_recipe_links',
+            'jarvis_inventory_movements', 'jarvis_inventory_batches', 'jarvis_recipes',
+            'jarvis_ingredients', 'jarvis_household_members'];
+        foreach ($tables as $table) {
+            $statement = $this->pdo->prepare('DELETE FROM ' . $table . ' WHERE household_id = :household_id');
+            $statement->execute(['household_id' => $householdId]);
+        }
+        $statement = $this->pdo->prepare('DELETE FROM jarvis_households WHERE id = :id');
+        $statement->execute(['id' => $householdId]);
         return $statement->rowCount() === 1;
     }
     /** @return array{id:int,name:string,owner_user_id:int,invite_code_hash:string}|null */

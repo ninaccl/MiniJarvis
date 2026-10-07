@@ -33,6 +33,20 @@ final class HouseholdController
     {
         return Response::success($this->households->current($this->context($request)));
     }
+    public function listItems(Request $request)
+    {
+        return Response::success($this->households->listItems($this->context($request)));
+    }
+    public function leave(Request $request)
+    {
+        $this->households->leave($this->context($request));
+        return Response::success(['left' => true]);
+    }
+    public function dissolve(Request $request)
+    {
+        $this->households->dissolve($this->context($request));
+        return Response::success(['dissolved' => true]);
+    }
     public function resetInvite(Request $request)
     {
         return Response::success($this->households->resetInvite($this->context($request)));

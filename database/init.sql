@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS jarvis_household_members (
   role VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'member',
   joined_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
-  UNIQUE KEY uq_household_members_user (user_id),
+  KEY idx_household_members_user (user_id),
   UNIQUE KEY uq_household_members_household_user (household_id, user_id),
   KEY idx_household_members_tenant_role (household_id, role),
   CONSTRAINT fk_household_members_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,

@@ -28,7 +28,6 @@ final class HouseholdService
         for ($attempt = 0; $attempt < self::INVITE_ATTEMPTS; $attempt++) {
             try {
                 return $this->transactions->transaction(function () use ($context, $name) {
-                    $this->ensureNotMember($context->userId);
                     list($inviteCode, $inviteHash) = $this->newInviteCandidate();
                     if ($this->households->inviteHashExists($inviteHash)) {
                         throw new InviteCodeCollision();
@@ -54,7 +53,6 @@ final class HouseholdService
         }
         try {
             return $this->transactions->transaction(function () use ($context, $inviteCode) {
-                $this->ensureNotMember($context->userId);
                 $household = $this->households->householdByInviteHash(InviteCode::hash($inviteCode));
                 if ($household === null) {
                     throw new ApiException(404, 'HOUSEHOLD_INVITE_NOT_FOUND', 'The invite code was not found.');
@@ -72,6 +70,35 @@ final class HouseholdService
         $householdId = $this->guard->requireMembership($context);
         $household = $this->requireHousehold($householdId);
         return ['household' => $this->presentHousehold($household, (string) $context->role), 'members' => $this->households->members($householdId)];
+    }
+    public function listItems(AuthContext $context)
+    {
+        $result = [];
+        foreach ($this->households->householdsForUser($context->userId) as $household) {
+            $result[] = $this->presentHousehold($household, $household['role']);
+        }
+        return ['households' => $result];
+    }
+    public function leave(AuthContext $context)
+    {
+        $householdId = $this->guard->requireMembership($context);
+        if ($context->role === 'owner') {
+            throw new ApiException(409, 'HOUSEHOLD_OWNER_CANNOT_LEAVE', 'The creator must dissolve the household.');
+        }
+        $this->transactions->transaction(function () use ($householdId, $context) {
+            if (!$this->households->removeMember($householdId, $context->userId)) {
+                throw new ApiException(404, 'HOUSEHOLD_MEMBER_NOT_FOUND', 'The household member was not found.');
+            }
+        });
+    }
+    public function dissolve(AuthContext $context)
+    {
+        $householdId = $this->guard->requireOwner($context);
+        $this->transactions->transaction(function () use ($householdId) {
+            if (!$this->households->deleteHousehold($householdId)) {
+                throw new ApiException(404, 'HOUSEHOLD_NOT_FOUND', 'The household was not found.');
+            }
+        });
     }
     /** @return array{invite_code:string} */
     public function resetInvite(AuthContext $context)
@@ -109,12 +136,6 @@ final class HouseholdService
             }
         });
     }
-    private function ensureNotMember($userId)
-    {
-        if ($this->households->membershipForUser($userId) !== null) {
-            throw $this->alreadyJoined();
-        }
-    }
     /** @return array{string,string} */
     private function newInviteCandidate()
     {
@@ -123,7 +144,7 @@ final class HouseholdService
     }
     private function alreadyJoined()
     {
-        return new ApiException(409, 'HOUSEHOLD_ALREADY_JOINED', 'The user already belongs to a household.');
+        return new ApiException(409, 'HOUSEHOLD_ALREADY_JOINED', 'The user already belongs to this household.');
     }
     /** @return array{id:int,name:string,owner_user_id:int,invite_code_hash:string} */
     private function requireHousehold($id)
