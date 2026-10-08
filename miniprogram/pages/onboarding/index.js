@@ -34,7 +34,7 @@ Page({
     this.setData({ working: true, error: '', lastAction });
     try {
       const result = await action();
-      if (result.invite_code) app().globalData.initialInviteCode = result.invite_code;
+      app().globalData.initialInviteCode = result.invite_code || '';
       app().globalData.session.patch({ household: result.household });
       await app().refreshHousehold();
       wx.reLaunch({ url: '/pages/recipes/index' });

@@ -35,7 +35,7 @@ final class HouseholdServiceTest extends TestCase
         $this->service->join($member, $first['invite_code']);
 
         $second = $this->service->create(new AuthContext(2, 1, 'member'), 'Other');
-        self::assertCount(2, $this->service->list(new AuthContext(2, 1, 'member'))['households']);
+        self::assertCount(2, $this->service->listItems(new AuthContext(2, 1, 'member'))['households']);
         self::assertSame('owner', $second['household']['role']);
     }
 
@@ -46,7 +46,7 @@ final class HouseholdServiceTest extends TestCase
         $this->service->join(new AuthContext(2, null, null), $first['invite_code']);
 
         $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']);
-        self::assertCount(2, $this->service->list(new AuthContext(2, 1, 'member'))['households']);
+        self::assertCount(2, $this->service->listItems(new AuthContext(2, 1, 'member'))['households']);
         $this->assertApiError(
             fn () => $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']),
             'HOUSEHOLD_ALREADY_JOINED',
@@ -61,8 +61,8 @@ final class HouseholdServiceTest extends TestCase
         $this->service->join(new AuthContext(2, null, null), $first['invite_code']);
         $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']);
         $this->service->leave(new AuthContext(2, $first['household']['id'], 'member'));
-        self::assertCount(1, $this->service->list(new AuthContext(2, null, null))['households']);
-        self::assertSame($second['household']['id'], $this->service->list(new AuthContext(2, null, null))['households'][0]['id']);
+        self::assertCount(1, $this->service->listItems(new AuthContext(2, null, null))['households']);
+        self::assertSame($second['household']['id'], $this->service->listItems(new AuthContext(2, null, null))['households'][0]['id']);
     }
 
     public function testOnlyOwnerCanDissolveAndOwnerCannotLeave(): void
@@ -74,7 +74,7 @@ final class HouseholdServiceTest extends TestCase
         $this->assertApiError(fn () => $this->service->dissolve(new AuthContext(2, $id, 'member')), 'HOUSEHOLD_OWNER_REQUIRED', 403);
         $this->service->dissolve(new AuthContext(1, $id, 'owner'));
         self::assertNull($this->store->household($id));
-        self::assertSame([], $this->service->list(new AuthContext(2, null, null))['households']);
+        self::assertSame([], $this->service->listItems(new AuthContext(2, null, null))['households']);
     }
 
     public function testOwnerOnlyResetInvite(): void

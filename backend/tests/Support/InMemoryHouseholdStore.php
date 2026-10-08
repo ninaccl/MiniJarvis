@@ -23,7 +23,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
     /** @var array<int, array{household_id:int,user_id:int,role:string,nickname:?string,avatar_url:?string}> */
     private array $memberships = [];
 
-    public function membershipForUser(int $userId): ?array
+    public function membershipForUser($userId): ?array
     {
         foreach ($this->memberships as $member) {
             if ($member['user_id'] === $userId) return $member;
@@ -31,16 +31,16 @@ final class InMemoryHouseholdStore implements HouseholdStore
         return null;
     }
 
-    public function householdsForUser(int $userId): array
+    public function householdsForUser($userId)
     {
         $result = [];
         foreach ($this->memberships as $member) {
-            if ($member['user_id'] === $userId) $result[] = [...$this->households[$member['household_id']], 'role' => $member['role']];
+            if ($member['user_id'] === $userId) $result[] = array_merge($this->households[$member['household_id']], ['role' => $member['role']]);
         }
         return $result;
     }
 
-    public function inviteHashExists(string $inviteHash): bool
+    public function inviteHashExists($inviteHash): bool
     {
         foreach ($this->households as $household) {
             if (hash_equals($household['invite_code_hash'], $inviteHash)) {
@@ -51,7 +51,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
         return false;
     }
 
-    public function create(string $name, int $ownerUserId, string $inviteHash): int
+    public function create($name, $ownerUserId, $inviteHash): int
     {
         $this->createAttempts++;
         if ($this->createFailure !== null) {
@@ -81,7 +81,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
         return $id;
     }
 
-    public function householdByInviteHash(string $inviteHash): ?array
+    public function householdByInviteHash($inviteHash): ?array
     {
         foreach ($this->households as $household) {
             if (hash_equals($household['invite_code_hash'], $inviteHash)) {
@@ -92,7 +92,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
         return null;
     }
 
-    public function addMember(int $householdId, int $userId): void
+    public function addMember($householdId, $userId): void
     {
         if ($this->joinMembershipConflict) {
             throw new MembershipAlreadyExists();
@@ -107,12 +107,12 @@ final class InMemoryHouseholdStore implements HouseholdStore
         ];
     }
 
-    public function household(int $householdId): ?array
+    public function household($householdId): ?array
     {
         return $this->households[$householdId] ?? null;
     }
 
-    public function members(int $householdId): array
+    public function members($householdId): array
     {
         return array_values(array_filter(
             $this->memberships,
@@ -120,12 +120,12 @@ final class InMemoryHouseholdStore implements HouseholdStore
         ));
     }
 
-    public function member(int $householdId, int $userId): ?array
+    public function member($householdId, $userId): ?array
     {
         return $this->memberships[$householdId . ':' . $userId] ?? null;
     }
 
-    public function replaceInviteHash(int $householdId, string $inviteHash): void
+    public function replaceInviteHash($householdId, $inviteHash): void
     {
         $this->resetAttempts++;
         if ($this->resetInviteCollisionsRemaining > 0) {
@@ -135,7 +135,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
         $this->households[$householdId]['invite_code_hash'] = $inviteHash;
     }
 
-    public function removeMember(int $householdId, int $userId): bool
+    public function removeMember($householdId, $userId): bool
     {
         $key = $householdId . ':' . $userId;
         if (!isset($this->memberships[$key]) || $this->memberships[$key]['role'] === 'owner') {
@@ -146,7 +146,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
         return true;
     }
 
-    public function deleteHousehold(int $householdId): bool
+    public function deleteHousehold($householdId)
     {
         if (!isset($this->households[$householdId])) return false;
         unset($this->households[$householdId]);

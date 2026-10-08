@@ -1,4 +1,8 @@
-.top-bar { display: flex; align-items: center; justify-content: space-between; margin: 6rpx 0 28rpx; }
+.top-bar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; margin: 6rpx 0 28rpx; }
+.heading { flex: 1; min-width: 0; }
 .title { color: #111827; font-size: 42rpx; font-weight: 700; letter-spacing: -.5rpx; }
 .subtitle { color: #6B7280; margin-top: 6rpx; font-size: 25rpx; }
-.avatar { width: 68rpx; height: 68rpx; min-width: 68rpx; padding: 0; border-radius: 50%; color: #007AFF; background: #EAF4FF; font-size: 28rpx; font-weight: 700; line-height: 68rpx; }
+.avatar { display: flex; flex: 0 0 88rpx; align-items: center; justify-content: center; width: 88rpx; max-width: 88rpx; height: 88rpx; min-width: 88rpx; padding: 0; border: 1rpx solid #DDE2E9; border-radius: 20rpx; color: #111827; background: #F5F5F7; }
+.person-mark { position: relative; width: 40rpx; height: 40rpx; }
+.person-head { position: absolute; top: 1rpx; left: 13rpx; width: 14rpx; height: 14rpx; box-sizing: border-box; border: 2rpx solid currentColor; border-radius: 50%; }
+.person-body { position: absolute; bottom: 1rpx; left: 6rpx; width: 28rpx; height: 16rpx; box-sizing: border-box; border: 2rpx solid currentColor; border-radius: 16rpx 16rpx 3rpx 3rpx; }

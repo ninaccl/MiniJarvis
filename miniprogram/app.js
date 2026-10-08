@@ -30,15 +30,15 @@ App({
     });
   },
 
-  login({ route = false } = {}) {
+  login({ route = false, profile = null } = {}) {
     if (this._loginPromise) return this._loginPromise;
     this._loginPromise = (async () => {
       const prior = this.globalData.session.get();
       const result = await this.globalData.api.post('/auth/wechat', {
         code: this.globalData.config.localLoginCode || await wxLogin(),
-        nickname: prior && prior.user ? prior.user.nickname : undefined,
-        avatar_url: prior && prior.user ? prior.user.avatar_url : undefined,
-      }, { includeAuth: false, retryAuth: false });
+        nickname: profile && profile.nickname != null ? profile.nickname : prior && prior.user ? prior.user.nickname : undefined,
+        avatar_url: profile && profile.avatar_url != null ? profile.avatar_url : prior && prior.user ? prior.user.avatar_url : undefined,
+      }, { includeAuth: false, includeHousehold: false, retryAuth: false });
       this.globalData.session.set({ token: result.access_token, user: result.user, household: prior && prior.household });
       await this.refreshHousehold();
       if (route) this.routeForSession();
@@ -50,7 +50,8 @@ App({
   async refreshHousehold() {
     const listed = await this.globalData.api.get('/households', { includeHousehold: false });
     const households = listed.households || [];
-    const selected = this.globalData.session.get()?.household;
+    const session = this.globalData.session.get();
+    const selected = session && session.household;
     const household = households.find((item) => selected && item.id === selected.id) || households[0] || null;
     this.globalData.households = households;
     this.globalData.session.patch({ household });
@@ -71,8 +72,13 @@ App({
   },
 
   async selectHousehold(household) {
+    const prior = this.globalData.session.get();
     this.globalData.session.patch({ household });
-    return this.refreshHousehold();
+    try { return await this.refreshHousehold(); }
+    catch (error) {
+      this.globalData.session.patch({ household: prior && prior.household });
+      throw error;
+    }
   },
 
   routeForSession() {

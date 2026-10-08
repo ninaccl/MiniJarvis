@@ -10,7 +10,7 @@ const config = read('backend/src/Config/Config.php');
 const schema = read('database/init.sql').replaceAll('jarvis_', '').replace(/\s+/g, ' ');
 
 function table(name) {
-  const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS jarvis_${name} \\((.*?)\\) ENGINE=InnoDB;`));
+  const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${name} \\((.*?)\\) ENGINE=InnoDB;`));
   assert.ok(match, `missing table ${name}`);
   return match[1].replaceAll('jarvis_', '');
 }
@@ -62,7 +62,7 @@ test('reminder implementation contains concurrency-safe claim, retry, stale-job,
   assert.match(service, /skipped_no_grant/);
   assert.match(repository, /restoreGrant/);
   assert.match(service, /Asia\/Shanghai/);
-  assert.match(service, /modify\('\+3 days'\)/);
+  assert.match(repository, /COALESCE\(p\.expiry_days, 15\)/);
   assert.match(taskService, /modify\('-24 hours'\)/);
   assert.match(taskService, /cancelTaskJobs/);
   assert.match(taskService, /task_due:.*due_at/s);

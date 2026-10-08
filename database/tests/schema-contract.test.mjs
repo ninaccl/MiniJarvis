@@ -8,10 +8,17 @@ const backendReadme = readFileSync(new URL('../../backend/README.md', import.met
 const databaseReadme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
 function table(name) {
-  const match = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS jarvis_${name} \\((.*?)\\) ENGINE=InnoDB;`));
+  const match = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${name} \\((.*?)\\) ENGINE=InnoDB;`));
   assert.ok(match, `missing table ${name}`);
   return match[1].replaceAll('jarvis_', '');
 }
+
+test('a user may join multiple households but cannot join the same household twice', () => {
+  const members = table('household_members');
+  assert.match(members, /KEY idx_household_members_user \(user_id\)/);
+  assert.match(members, /UNIQUE KEY uq_household_members_household_user \(household_id, user_id\)/);
+  assert.doesNotMatch(members, /UNIQUE KEY uq_household_members_user \(user_id\)/);
+});
 
 test('tenant-owned parent references use composite household foreign keys', () => {
   const expectations = {
