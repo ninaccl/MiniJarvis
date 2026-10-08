@@ -1,7 +1,7 @@
 <view class="page">
   <top-bar title="菜谱" subtitle="把每一顿的灵感留在家里" avatar="{{avatar}}" bind:settings="openSettings" />
   <view class="toolbar"><input class="search" placeholder="搜索菜名或描述" maxlength="200" value="{{q}}" data-field="q" bindinput="input" bindconfirm="load" confirm-type="search"/><button class="secondary-button" bindtap="load">搜索</button></view>
-  <view class="pills"><button class="pill {{categoryId === '' ? 'selected' : ''}}" data-id="" bindtap="category">全部</button><button wx:for="{{categories}}" wx:key="id" class="pill {{categoryId == item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="category">{{item.name}}</button></view>
+  <view class="pills"><view class="pill {{categoryId === '' ? 'selected' : ''}}" data-id="" bindtap="category">全部</view><view wx:for="{{categories}}" wx:key="id" class="pill {{categoryId == item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="category">{{item.name}}</view></view>
   <button class="primary-button block" bindtap="create">＋ 记录菜谱</button>
   <state-panel wx:if="{{error}}" type="error" title="加载失败" description="{{error}}" bind:retry="load"/>
   <state-panel wx:if="{{loading && !items.length}}" type="loading" title="正在加载菜谱"/>
