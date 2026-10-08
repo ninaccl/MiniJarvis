@@ -25,7 +25,7 @@ class CoreSessionStore55 implements App\Auth\SessionStore
     {
         $this->hash = $tokenHash;
     }
-    public function findActiveContext($tokenHash, DateTimeImmutable $now)
+    public function findActiveContext($tokenHash, DateTimeImmutable $now, $householdId = null)
     {
         if ($tokenHash !== $this->hash) return null;
         return new App\Auth\AuthContext(5, 7, 'owner');
