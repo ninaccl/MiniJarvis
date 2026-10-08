@@ -1,6 +1,6 @@
 module.exports = {
-  baseUrl: 'http://127.0.0.1:8080/api/v1',
-  localLoginCode: 'dev:alice',
+  baseUrl: 'https://www.sunhx.cn/backend/public/index.php/api/v1',
+  localLoginCode: '',
   subscriptionTemplates: {},
   externalPrograms: {},
 };

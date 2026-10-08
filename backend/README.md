@@ -60,15 +60,16 @@ Pass the API token as `Authorization: Bearer <token>`. The backend intentionally
 | POST | `/api/v1/link-previews` | Member | Fetch a guarded best-effort external-link preview |
 | GET | `/api/v1/link-previews/{token}/image` | Creating member | Read an unexpired temporary preview image |
 | POST | `/api/v1/link-previews/{token}/adopt` | Creating member | Adopt a temporary preview image once |
-| GET | `/api/v1/inventory?q=&status=all\|active\|expiring\|expired` | Member | List household inventory batches |
+| GET | `/api/v1/inventory?q=&status=all\|active\|expiring\|expired&expiry_days=15` | Member | List household inventory batches with a 0–365 day expiry window |
 | POST | `/api/v1/inventory/batches` | Member | Create a batch and its initial movement |
 | PATCH | `/api/v1/inventory/batches/{id}` | Member | Update expiry date and/or note |
+| DELETE | `/api/v1/inventory/batches/{id}` | Member | Hide a batch while retaining its history |
 | POST | `/api/v1/inventory/batches/{id}/movements` | Member | Add, consume, or set batch stock |
 | GET | `/api/v1/inventory/movements?page=&page_size=` | Member | Read immutable movement history |
 | GET | `/api/v1/recipes/matches?count=` | Member | Greedily match 1–10 recipes (default 2) |
 | GET, POST | `/api/v1/tasks` | Member | Filter household tasks or create a task/subtask |
 | GET, PATCH, DELETE | `/api/v1/tasks/{id}` | Member | Read, update/link completion, or cascade-delete a task |
-| GET, PATCH | `/api/v1/notifications/preferences` | Member | Read or update task/expiry notification preferences |
+| GET, PATCH | `/api/v1/notifications/preferences` | Member | Read or update task/expiry notification preferences and expiry days |
 | POST | `/api/v1/notifications/subscription-grants` | Member | Record one WeChat subscription prompt result |
 
 Success responses are `{"success":true,"data":...,"meta":...}` (with optional `meta`). Failures are `{"success":false,"error":{"code":"...","message":"...","fields":...}}` (with optional `fields`). Expected client failures use 401, 403, 404, 409, or 422; unhandled failures use 500 without exposing internals.
@@ -115,4 +116,4 @@ Configure the two WeChat subscription template IDs, their field keys, mini-progr
 */5 * * * * cd /path/to/backend && /usr/bin/php bin/send-reminders.php
 ```
 
-The runner groups positive inventory batches expiring today through three days ahead by the Asia/Shanghai calendar and schedules that day's summary for 09:00 local time. Task and job instants remain UTC. A missing one-time grant cancels that job as an observable `skipped_no_grant` outcome without treating it as an operational error.
+The runner groups positive inventory batches expiring today through each member's configured expiry window (15 days by default) by the Asia/Shanghai calendar and schedules that day's summary for 09:00 local time. Task and job instants remain UTC. A missing one-time grant cancels that job as an observable `skipped_no_grant` outcome without treating it as an operational error.

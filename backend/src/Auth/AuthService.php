@@ -47,14 +47,17 @@ final class AuthService
         $this->sessions->create($user['id'], hash('sha256', $plainToken), $expiresAt);
         return ['access_token' => $plainToken, 'token_type' => 'Bearer', 'expires_at' => $expiresAt->format(DATE_ATOM), 'user' => $user];
     }
-    public function authenticateToken($plainToken)
+    public function authenticateToken($plainToken, $householdId = null)
     {
         if (preg_match('/^[a-f0-9]{64}$/', $plainToken) !== 1) {
             throw new ApiException(401, 'AUTHENTICATION_REQUIRED', 'A valid Bearer token is required.');
         }
-        $context = $this->sessions->findActiveContext(hash('sha256', $plainToken), new DateTimeImmutable('now', new DateTimeZone('UTC')));
+        $context = $this->sessions->findActiveContext(hash('sha256', $plainToken), new DateTimeImmutable('now', new DateTimeZone('UTC')), $householdId);
         if ($context === null) {
             throw new ApiException(401, 'AUTHENTICATION_REQUIRED', 'A valid Bearer token is required.');
+        }
+        if ($householdId !== null && $context->householdId !== $householdId) {
+            throw new ApiException(403, 'HOUSEHOLD_MEMBERSHIP_REQUIRED', 'Household membership is required.');
         }
         return $context;
     }

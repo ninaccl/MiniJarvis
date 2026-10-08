@@ -6,5 +6,5 @@ use DateTimeImmutable;
 interface SessionStore
 {
     public function create($userId, $tokenHash, DateTimeImmutable $expiresAt);
-    public function findActiveContext($tokenHash, DateTimeImmutable $now);
+    public function findActiveContext($tokenHash, DateTimeImmutable $now, $householdId = null);
 }

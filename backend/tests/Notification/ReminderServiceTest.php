@@ -36,6 +36,19 @@ final class ReminderServiceTest extends TestCase
         self::assertCount(1, $this->repository->grants);
     }
 
+    public function testExpiryDaysDefaultAndPreferenceValidation(): void
+    {
+        self::assertSame(15, $this->service->preferences($this->context)['expiry_days']);
+        self::assertSame(7, $this->service->updatePreferences($this->context, ['expiry_days' => 7])['expiry_days']);
+        self::assertTrue($this->service->preferences($this->context)['inventory_expiry']);
+        try {
+            $this->service->updatePreferences($this->context, ['expiry_days' => 366]);
+            self::fail('Expected validation error.');
+        } catch (\App\Http\ApiException $error) {
+            self::assertSame(422, $error->status());
+        }
+    }
+
     public function testExpirySummaryGroupsPerMemberAndShanghaiDateAtUtcBoundary(): void
     {
         $this->repository->expiry = [['household_id' => 1, 'user_id' => 2, 'items' => [

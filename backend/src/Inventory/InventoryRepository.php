@@ -12,6 +12,7 @@ interface InventoryRepository
     public function createBatch($householdId, $userId, array $batch);
     public function updateBatchDetails($householdId, $batchId, $hasExpiry, $expiryDate, $hasNote, $note);
     public function updateBatchQuantity($householdId, $batchId, $baseQuantity);
+    public function deleteBatch($householdId, $batchId);
     /** @param array<string,mixed> $movement */
     public function appendMovement($householdId, $userId, array $movement);
     /** @return array{items:list<array<string,mixed>>,total:int} */

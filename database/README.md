@@ -1,5 +1,7 @@
 # Database schema
 
+For existing installations, apply `migrations/2026-10-07-multiple-households.sql` once before deploying the multi-household API. Apply `migrations/2026-10-08-inventory-expiry-and-archive.sql` before deploying inventory deletion and configurable expiry windows. New installations receive both schema changes from `init.sql`.
+
 `init.sql` is idempotent and targets MySQL 5.7.25. It creates `jarvis_family` with `utf8mb4_unicode_ci`, creates all tables required by product Tasks 1–5, and upserts reference seeds.
 
 Apply it with an account allowed to create databases:
@@ -8,7 +10,7 @@ Apply it with an account allowed to create databases:
 mysql --default-character-set=utf8mb4 -u root -p < init.sql
 ```
 
-After applying `init.sql`, run the transactional MySQL 5.7 integration probe. It verifies application tables and seeds, the single-household membership constraint, tenant-aware composite foreign keys, and rollback cleanup:
+After applying `init.sql`, run the transactional MySQL 5.7 integration probe. It verifies application tables and seeds, membership uniqueness within a household, tenant-aware composite foreign keys, and rollback cleanup:
 
 ```sh
 mysql --default-character-set=utf8mb4 -u root -p < tests/mysql-integration.sql
@@ -24,7 +26,7 @@ mysql --default-character-set=utf8mb4 -u root -p < tests/mysql-integration.sql
 - Task self-parenting and hierarchy depth are rejected transactionally by `TaskService`. MySQL retains the tenant-aware parent foreign key, but does not use a `CHECK` against the auto-increment task id because the target MySQL 5.7 does not enforce `CHECK` constraints.
 - Ingredient deletion is restricted while an ingredient is referenced by recipe usage, inventory batches, or immutable inventory movements. A physical recipe purge cascades only its composition/link children; normal recipe removal remains a soft delete.
 - JSON is limited to `shopping_lists.selection_snapshot`, `shopping_list_items.source_summary`, and `notification_jobs.payload_snapshot`. PHP 5.5 reads these columns through `CAST(... AS CHAR)` because its MySQL client does not recognize native JSON column metadata. Relational fields remain queryable columns.
-- User membership is globally unique in `household_members`, enforcing at most one household per user. Application transactions translate the named membership duplicate constraint to a friendly 409; database constraints remain the final concurrency guard.
+- User membership is unique within each household. A user may belong to multiple households. Application transactions translate duplicate membership into a friendly 409; database constraints remain the final concurrency guard.
 - Tenant parent/child relationships use composite foreign keys that include `household_id`. Parent tables expose matching `(household_id, id)` unique keys. Notification rows reference `(household_id, user_id)` membership pairs. Nullable task assignments and shopping-item checker/stocker identities use restrictive composite member foreign keys; the household repository clears both identity columns in the same transaction before deleting a member, without changing task, check, or stock history.
 - API session tokens and household invite codes are stored only as SHA-256 hashes.
 

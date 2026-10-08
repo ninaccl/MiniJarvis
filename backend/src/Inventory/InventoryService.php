@@ -29,7 +29,7 @@ final class InventoryService
         $this->guard = $guard;
     }
     /** @return list<array<string,mixed>> */
-    public function listItems(AuthContext $context, $query = '', $status = 'all')
+    public function listItems(AuthContext $context, $query = '', $status = 'all', $expiryDays = 15)
     {
         $householdId = $this->guard->requireMembership($context);
         $fields = [];
@@ -39,9 +39,12 @@ final class InventoryService
         if (!in_array($status, ['all', 'active', 'expiring', 'expired'], true)) {
             $fields['status'] = 'Must be all, active, expiring, or expired.';
         }
+        if (!is_int($expiryDays) || $expiryDays < 0 || $expiryDays > 365) {
+            $fields['expiry_days'] = 'Must be an integer from 0 to 365.';
+        }
         $this->throwValidation($fields, 'Inventory query is invalid.');
         $today = $this->clock->today();
-        $through = $today->modify('+3 days')->format('Y-m-d');
+        $through = $today->modify('+' . $expiryDays . ' days')->format('Y-m-d');
         $todayString = $today->format('Y-m-d');
         $items = [];
         foreach ($this->inventory->listBatches($householdId, trim($query)) as $batch) {
@@ -108,6 +111,15 @@ final class InventoryService
             throw $this->notFound();
         }
         return $this->requireBatch($householdId, $batchId);
+    }
+    public function delete(AuthContext $context, $batchId)
+    {
+        $householdId = $this->guard->requireMembership($context);
+        $this->requireBatch($householdId, $batchId);
+        if (!$this->inventory->deleteBatch($householdId, $batchId)) {
+            throw $this->notFound();
+        }
+        return ['deleted' => true];
     }
     /** @return array<string,mixed> */
     public function move(AuthContext $context, $batchId, array $payload)

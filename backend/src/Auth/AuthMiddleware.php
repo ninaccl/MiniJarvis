@@ -18,7 +18,11 @@ final class AuthMiddleware
         if ($authorization === null || preg_match('/^Bearer\s+(\S+)$/i', trim($authorization), $matches) !== 1) {
             throw new ApiException(401, 'AUTHENTICATION_REQUIRED', 'A Bearer token is required.');
         }
-        $context = $this->auth->authenticateToken($matches[1]);
+        $selected = $request->header('x-household-id');
+        if ($selected !== null && preg_match('/^[1-9][0-9]*$/', $selected) !== 1) {
+            throw new ApiException(400, 'HOUSEHOLD_INVALID_SELECTION', 'A valid household ID is required.');
+        }
+        $context = $this->auth->authenticateToken($matches[1], $selected === null ? null : (int) $selected);
         $response = $next($request->withAttribute('auth', $context));
         if (!$response instanceof Response) {
             throw new \LogicException('Authenticated handlers must return an HTTP response.');

@@ -22,7 +22,7 @@ final class InMemorySessionStore implements SessionStore
         ];
     }
 
-    public function findActiveContext(string $tokenHash, DateTimeImmutable $now): ?AuthContext
+    public function findActiveContext(string $tokenHash, DateTimeImmutable $now, ?int $householdId = null): ?AuthContext
     {
         foreach ($this->sessions as $session) {
             if (hash_equals($session['token_hash'], $tokenHash) && $session['expires_at'] > $now) {

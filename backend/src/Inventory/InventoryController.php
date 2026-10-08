@@ -17,7 +17,8 @@ final class InventoryController
     }
     public function listItems(Request $request)
     {
-        return Response::success($this->inventory->listItems($this->context($request), $request->query('q', '') !== null ? $request->query('q', '') : '', $request->query('status', 'all') !== null ? $request->query('status', 'all') : 'all'));
+        $days = $request->query('expiry_days', '15');
+        return Response::success($this->inventory->listItems($this->context($request), $request->query('q', '') !== null ? $request->query('q', '') : '', $request->query('status', 'all') !== null ? $request->query('status', 'all') : 'all', preg_match('/^(0|[1-9][0-9]*)$/', (string) $days) === 1 ? (int) $days : -1));
     }
     public function create(Request $request)
     {
@@ -26,6 +27,10 @@ final class InventoryController
     public function update(Request $request)
     {
         return Response::success($this->inventory->update($this->context($request), $this->batchId($request), $request->json()));
+    }
+    public function delete(Request $request)
+    {
+        return Response::success($this->inventory->delete($this->context($request), $this->batchId($request)));
     }
     public function move(Request $request)
     {

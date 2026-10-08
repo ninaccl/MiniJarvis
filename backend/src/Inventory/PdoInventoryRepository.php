@@ -15,7 +15,7 @@ final class PdoInventoryRepository implements InventoryRepository
     }
     public function listBatches($householdId, $query)
     {
-        $sql = $this->batchSelect() . ' WHERE b.household_id = :household_id';
+        $sql = $this->batchSelect() . ' WHERE b.household_id = :household_id AND b.deleted_at IS NULL';
         $params = ['household_id' => $householdId];
         if ($query !== '') {
             $sql .= " AND i.name LIKE :query ESCAPE '\\\\'";
@@ -28,7 +28,7 @@ final class PdoInventoryRepository implements InventoryRepository
     }
     public function findBatch($householdId, $batchId, $forUpdate = false)
     {
-        $statement = $this->pdo->prepare($this->batchSelect() . ' WHERE b.household_id = :household_id AND b.id = :id' . ($forUpdate ? ' FOR UPDATE' : ''));
+        $statement = $this->pdo->prepare($this->batchSelect() . ' WHERE b.household_id = :household_id AND b.id = :id AND b.deleted_at IS NULL' . ($forUpdate ? ' FOR UPDATE' : ''));
         $statement->execute(['household_id' => $householdId, 'id' => $batchId]);
         $row = $statement->fetch();
         return $row === false ? null : $this->batchRow($row);
@@ -41,13 +41,13 @@ final class PdoInventoryRepository implements InventoryRepository
     }
     public function updateBatchDetails($householdId, $batchId, $hasExpiry, $expiryDate, $hasNote, $note)
     {
-        $statement = $this->pdo->prepare('UPDATE jarvis_inventory_batches SET ' . 'expires_on = IF(:has_expiry = 1, :expires_on, expires_on), ' . 'note = IF(:has_note = 1, :note, note), updated_at = CURRENT_TIMESTAMP(6) ' . 'WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('UPDATE jarvis_inventory_batches SET ' . 'expires_on = IF(:has_expiry = 1, :expires_on, expires_on), ' . 'note = IF(:has_note = 1, :note, note), updated_at = CURRENT_TIMESTAMP(6) ' . 'WHERE household_id = :household_id AND id = :id AND deleted_at IS NULL');
         $statement->execute(['has_expiry' => $hasExpiry ? 1 : 0, 'expires_on' => $expiryDate, 'has_note' => $hasNote ? 1 : 0, 'note' => $note, 'household_id' => $householdId, 'id' => $batchId]);
         return $statement->rowCount() === 1 || $this->findBatch($householdId, $batchId) !== null;
     }
     public function updateBatchQuantity($householdId, $batchId, $baseQuantity)
     {
-        $statement = $this->pdo->prepare('UPDATE jarvis_inventory_batches SET quantity = :quantity, updated_at = CURRENT_TIMESTAMP(6) WHERE household_id = :household_id AND id = :id');
+        $statement = $this->pdo->prepare('UPDATE jarvis_inventory_batches SET quantity = :quantity, updated_at = CURRENT_TIMESTAMP(6) WHERE household_id = :household_id AND id = :id AND deleted_at IS NULL');
         $statement->execute(['quantity' => $baseQuantity, 'household_id' => $householdId, 'id' => $batchId]);
         return $statement->rowCount() === 1 || $this->findBatch($householdId, $batchId) !== null;
     }
@@ -59,6 +59,12 @@ final class PdoInventoryRepository implements InventoryRepository
             throw new \RuntimeException('Inventory movement batch disappeared during the transaction.');
         }
         return (int) $this->pdo->lastInsertId();
+    }
+    public function deleteBatch($householdId, $batchId)
+    {
+        $statement = $this->pdo->prepare('UPDATE jarvis_inventory_batches SET deleted_at = CURRENT_TIMESTAMP(6) WHERE household_id = :household_id AND id = :id AND deleted_at IS NULL');
+        $statement->execute(['household_id' => $householdId, 'id' => $batchId]);
+        return $statement->rowCount() === 1;
     }
     public function listMovements($householdId, $limit, $offset)
     {
@@ -73,7 +79,7 @@ final class PdoInventoryRepository implements InventoryRepository
     }
     public function availableBatches($householdId, $today)
     {
-        $statement = $this->pdo->prepare($this->batchSelect() . ' WHERE b.household_id = :household_id AND b.quantity > 0 AND (b.expires_on IS NULL OR b.expires_on >= :today) ORDER BY b.id');
+        $statement = $this->pdo->prepare($this->batchSelect() . ' WHERE b.household_id = :household_id AND b.deleted_at IS NULL AND b.quantity > 0 AND (b.expires_on IS NULL OR b.expires_on >= :today) ORDER BY b.id');
         $statement->execute(['household_id' => $householdId, 'today' => $today]);
         return array_map([$this, 'batchRow'], $statement->fetchAll());
     }

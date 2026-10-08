@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const application = read('backend/src/Http/Application.php');
 const bootstrap = read('backend/public/index.php');
 const config = read('backend/src/Config/Config.php');
-const schema = read('database/init.sql').replace(/\s+/g, ' ');
+const schema = read('database/init.sql').replaceAll('jarvis_', '').replace(/\s+/g, ' ');
 
 function table(name) {
   const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS jarvis_${name} \\((.*?)\\) ENGINE=InnoDB;`));

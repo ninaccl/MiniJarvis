@@ -4,15 +4,15 @@ namespace App\Notification;
 
 interface NotificationRepository
 {
-    /** @return array{task_due:bool,inventory_expiry:bool} */
+    /** @return array{task_due:bool,inventory_expiry:bool,expiry_days:int} */
     public function preferences($householdId, $userId);
-    public function updatePreferences($householdId, $userId, $taskDue, $inventoryExpiry);
+    public function updatePreferences($householdId, $userId, $taskDue, $inventoryExpiry, $expiryDays = null);
     public function addGrant($householdId, $userId, $templateType);
     public function cancelTaskJobs($householdId, $taskId);
     /** @param array<string,mixed> $payload */
     public function upsertJob($householdId, $userId, $eventKey, $jobType, $scheduledAt, array $payload);
     /** @return list<array{household_id:int,user_id:int,items:list<array<string,mixed>>}> */
-    public function expiryRecipients($fromDate, $throughDate);
+    public function expiryRecipients($fromDate);
     /** @return array<string,mixed>|null */
     public function claimDueJob($nowUtc);
     /** @param array<string,mixed> $job */

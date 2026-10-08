@@ -28,30 +28,53 @@ final class HouseholdServiceTest extends TestCase
         );
     }
 
-    public function testUserAlreadyInHouseholdCannotCreateAnother(): void
+    public function testUserCanCreateAnotherHousehold(): void
     {
         $first = $this->service->create(new AuthContext(1, null, null), 'Home');
         $member = new AuthContext(2, null, null);
         $this->service->join($member, $first['invite_code']);
 
-        $this->assertApiError(
-            fn () => $this->service->create(new AuthContext(2, 1, 'member'), 'Other'),
-            'HOUSEHOLD_ALREADY_JOINED',
-            409,
-        );
+        $second = $this->service->create(new AuthContext(2, 1, 'member'), 'Other');
+        self::assertCount(2, $this->service->list(new AuthContext(2, 1, 'member'))['households']);
+        self::assertSame('owner', $second['household']['role']);
     }
 
-    public function testUserAlreadyInHouseholdCannotJoinAnother(): void
+    public function testUserCanJoinAnotherHouseholdButNotTheSameOneTwice(): void
     {
         $first = $this->service->create(new AuthContext(1, null, null), 'First');
         $second = $this->service->create(new AuthContext(3, null, null), 'Second');
         $this->service->join(new AuthContext(2, null, null), $first['invite_code']);
 
+        $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']);
+        self::assertCount(2, $this->service->list(new AuthContext(2, 1, 'member'))['households']);
         $this->assertApiError(
             fn () => $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']),
             'HOUSEHOLD_ALREADY_JOINED',
             409,
         );
+    }
+
+    public function testMemberCanLeaveOneHouseholdAndKeepAnother(): void
+    {
+        $first = $this->service->create(new AuthContext(1, null, null), 'First');
+        $second = $this->service->create(new AuthContext(3, null, null), 'Second');
+        $this->service->join(new AuthContext(2, null, null), $first['invite_code']);
+        $this->service->join(new AuthContext(2, 1, 'member'), $second['invite_code']);
+        $this->service->leave(new AuthContext(2, $first['household']['id'], 'member'));
+        self::assertCount(1, $this->service->list(new AuthContext(2, null, null))['households']);
+        self::assertSame($second['household']['id'], $this->service->list(new AuthContext(2, null, null))['households'][0]['id']);
+    }
+
+    public function testOnlyOwnerCanDissolveAndOwnerCannotLeave(): void
+    {
+        $created = $this->service->create(new AuthContext(1, null, null), 'Home');
+        $this->service->join(new AuthContext(2, null, null), $created['invite_code']);
+        $id = $created['household']['id'];
+        $this->assertApiError(fn () => $this->service->leave(new AuthContext(1, $id, 'owner')), 'HOUSEHOLD_OWNER_CANNOT_LEAVE', 409);
+        $this->assertApiError(fn () => $this->service->dissolve(new AuthContext(2, $id, 'member')), 'HOUSEHOLD_OWNER_REQUIRED', 403);
+        $this->service->dissolve(new AuthContext(1, $id, 'owner'));
+        self::assertNull($this->store->household($id));
+        self::assertSame([], $this->service->list(new AuthContext(2, null, null))['households']);
     }
 
     public function testOwnerOnlyResetInvite(): void

@@ -2,6 +2,7 @@ const { localDate } = require('./date');
 const meals = [{ code: 'breakfast', name: '早餐' }, { code: 'lunch', name: '午餐' }, { code: 'dinner', name: '晚餐' }];
 // Unit codes are the public contract seeded by database/init.sql; no server imports.
 const units = [{ code: 'g', name: '克' }, { code: 'kg', name: '千克' }, { code: 'ml', name: '毫升' }, { code: 'l', name: '升' }, { code: 'piece', name: '个' }, { code: 'pack', name: '包' }, { code: 'box', name: '盒' }, { code: 'bunch', name: '把' }, { code: 'tbsp', name: '汤匙' }, { code: 'tsp', name: '茶匙' }];
+function unitName(code) { const unit = units.find(item => item.code === code); return unit ? unit.name : (code ? '单位' : ''); }
 function quantity(value) {
   const text = String(value == null ? '' : value).trim();
   if (!/^\d{1,10}(\.\d{1,4})?$/.test(text) || Number(text) <= 0 || Number(text) >= 10000000000) throw new Error('数量须大于 0，最多四位小数');
@@ -59,4 +60,4 @@ function taskCards(rows, status, assignee, now = new Date()) {
   const match = row => (status === 'all' || row.status === status) && (!assignee || row.assignee_user_id === Number(assignee));
   return rows.filter(row => row.parent_id == null).map(row => ({ ...decorate(row), children: rows.filter(child => child.parent_id === row.id && match(child)).map(decorate), matchesFilter: match(row) })).filter(row => row.matchesFilter || row.children.length);
 }
-module.exports = { meals, units, quantity, recipePayload, stockTotals, selectionRows, deadlineParts, dueInstant, taskCards };
+module.exports = { meals, units, unitName, quantity, recipePayload, stockTotals, selectionRows, deadlineParts, dueInstant, taskCards };

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const sql = readFileSync(new URL('../init.sql', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+const sql = readFileSync(new URL('../init.sql', import.meta.url), 'utf8').replaceAll('jarvis_', '').replace(/\s+/g, ' ');
 const envExample = readFileSync(new URL('../../backend/.env.example', import.meta.url), 'utf8');
 const backendReadme = readFileSync(new URL('../../backend/README.md', import.meta.url), 'utf8');
 const databaseReadme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');

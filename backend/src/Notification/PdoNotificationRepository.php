@@ -12,16 +12,16 @@ final class PdoNotificationRepository implements NotificationRepository
     }
     public function preferences($householdId, $userId)
     {
-        $statement = $this->pdo->prepare('SELECT task_due, inventory_expiry FROM jarvis_notification_preferences WHERE household_id = :household_id AND user_id = :user_id');
+        $statement = $this->pdo->prepare('SELECT task_due, inventory_expiry, expiry_days FROM jarvis_notification_preferences WHERE household_id = :household_id AND user_id = :user_id');
         $statement->execute(['household_id' => $householdId, 'user_id' => $userId]);
         $row = $statement->fetch();
-        return $row === false ? ['task_due' => true, 'inventory_expiry' => true] : ['task_due' => (bool) $row['task_due'], 'inventory_expiry' => (bool) $row['inventory_expiry']];
+        return $row === false ? ['task_due' => true, 'inventory_expiry' => true, 'expiry_days' => 15] : ['task_due' => (bool) $row['task_due'], 'inventory_expiry' => (bool) $row['inventory_expiry'], 'expiry_days' => (int) $row['expiry_days']];
     }
-    public function updatePreferences($householdId, $userId, $taskDue, $inventoryExpiry)
+    public function updatePreferences($householdId, $userId, $taskDue, $inventoryExpiry, $expiryDays = null)
     {
         $current = $this->preferences($householdId, $userId);
-        $statement = $this->pdo->prepare('INSERT INTO jarvis_notification_preferences (household_id, user_id, task_due, inventory_expiry) VALUES (:household_id, :user_id, :task_due, :inventory_expiry) ' . 'ON DUPLICATE KEY UPDATE task_due = VALUES(task_due), inventory_expiry = VALUES(inventory_expiry), updated_at = CURRENT_TIMESTAMP(6)');
-        $statement->execute(['household_id' => $householdId, 'user_id' => $userId, 'task_due' => (isset($taskDue) ? $taskDue : $current['task_due']) ? 1 : 0, 'inventory_expiry' => (isset($inventoryExpiry) ? $inventoryExpiry : $current['inventory_expiry']) ? 1 : 0]);
+        $statement = $this->pdo->prepare('INSERT INTO jarvis_notification_preferences (household_id, user_id, task_due, inventory_expiry, expiry_days) VALUES (:household_id, :user_id, :task_due, :inventory_expiry, :expiry_days) ' . 'ON DUPLICATE KEY UPDATE task_due = VALUES(task_due), inventory_expiry = VALUES(inventory_expiry), expiry_days = VALUES(expiry_days), updated_at = CURRENT_TIMESTAMP(6)');
+        $statement->execute(['household_id' => $householdId, 'user_id' => $userId, 'task_due' => (isset($taskDue) ? $taskDue : $current['task_due']) ? 1 : 0, 'inventory_expiry' => (isset($inventoryExpiry) ? $inventoryExpiry : $current['inventory_expiry']) ? 1 : 0, 'expiry_days' => isset($expiryDays) ? $expiryDays : $current['expiry_days']]);
     }
     public function addGrant($householdId, $userId, $templateType)
     {
@@ -41,10 +41,10 @@ final class PdoNotificationRepository implements NotificationRepository
         $statement = $this->pdo->prepare('INSERT INTO jarvis_notification_jobs (household_id, user_id, event_key, job_type, scheduled_at, payload_snapshot) ' . 'VALUES (:household_id, :user_id, :event_key, :job_type, :scheduled_at, :payload) ' . "ON DUPLICATE KEY UPDATE user_id = IF({$preserve}, user_id, VALUES(user_id)), " . "scheduled_at = IF({$preserve}, scheduled_at, VALUES(scheduled_at)), " . "payload_snapshot = IF({$preserve}, payload_snapshot, VALUES(payload_snapshot)), " . "last_error = IF({$preserve}, last_error, NULL), updated_at = IF({$preserve}, updated_at, CURRENT_TIMESTAMP(6)), " . "status = IF({$preserve}, status, 'pending')");
         $statement->execute(['household_id' => $householdId, 'user_id' => $userId, 'event_key' => $eventKey, 'job_type' => $jobType, 'scheduled_at' => $scheduledAt, 'payload' => \App\Support\Compat::jsonEncode($payload)]);
     }
-    public function expiryRecipients($fromDate, $throughDate)
+    public function expiryRecipients($fromDate)
     {
-        $statement = $this->pdo->prepare('SELECT hm.household_id, hm.user_id, b.id AS batch_id, i.name, b.expires_on ' . 'FROM jarvis_household_members hm ' . 'LEFT JOIN jarvis_notification_preferences p ON p.household_id = hm.household_id AND p.user_id = hm.user_id ' . 'JOIN jarvis_inventory_batches b ON b.household_id = hm.household_id AND b.quantity > 0 AND b.expires_on BETWEEN :from_date AND :through_date ' . 'JOIN jarvis_ingredients i ON i.household_id = b.household_id AND i.id = b.ingredient_id ' . 'WHERE COALESCE(p.inventory_expiry, 1) = 1 ORDER BY hm.household_id, hm.user_id, b.expires_on, b.id');
-        $statement->execute(['from_date' => $fromDate, 'through_date' => $throughDate]);
+        $statement = $this->pdo->prepare('SELECT hm.household_id, hm.user_id, b.id AS batch_id, i.name, b.expires_on ' . 'FROM jarvis_household_members hm ' . 'LEFT JOIN jarvis_notification_preferences p ON p.household_id = hm.household_id AND p.user_id = hm.user_id ' . 'JOIN jarvis_inventory_batches b ON b.household_id = hm.household_id AND b.deleted_at IS NULL AND b.quantity > 0 AND b.expires_on BETWEEN :from_date AND DATE_ADD(:through_from, INTERVAL COALESCE(p.expiry_days, 15) DAY) ' . 'JOIN jarvis_ingredients i ON i.household_id = b.household_id AND i.id = b.ingredient_id ' . 'WHERE COALESCE(p.inventory_expiry, 1) = 1 ORDER BY hm.household_id, hm.user_id, b.expires_on, b.id');
+        $statement->execute(['from_date' => $fromDate, 'through_from' => $fromDate]);
         $grouped = [];
         foreach ($statement->fetchAll() as $row) {
             $key = $row['household_id'] . ':' . $row['user_id'];

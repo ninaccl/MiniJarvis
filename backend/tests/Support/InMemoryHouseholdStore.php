@@ -25,7 +25,19 @@ final class InMemoryHouseholdStore implements HouseholdStore
 
     public function membershipForUser(int $userId): ?array
     {
-        return $this->memberships[$userId] ?? null;
+        foreach ($this->memberships as $member) {
+            if ($member['user_id'] === $userId) return $member;
+        }
+        return null;
+    }
+
+    public function householdsForUser(int $userId): array
+    {
+        $result = [];
+        foreach ($this->memberships as $member) {
+            if ($member['user_id'] === $userId) $result[] = [...$this->households[$member['household_id']], 'role' => $member['role']];
+        }
+        return $result;
     }
 
     public function inviteHashExists(string $inviteHash): bool
@@ -52,14 +64,14 @@ final class InMemoryHouseholdStore implements HouseholdStore
             $this->createInviteCollisionsRemaining--;
             throw new InviteCodeCollision();
         }
-        $id = count($this->households) + 1;
+        $id = $this->households === [] ? 1 : max(array_keys($this->households)) + 1;
         $this->households[$id] = [
             'id' => $id,
             'name' => $name,
             'owner_user_id' => $ownerUserId,
             'invite_code_hash' => $inviteHash,
         ];
-        $this->memberships[$ownerUserId] = [
+        $this->memberships[$id . ':' . $ownerUserId] = [
             'household_id' => $id,
             'user_id' => $ownerUserId,
             'role' => 'owner',
@@ -85,7 +97,8 @@ final class InMemoryHouseholdStore implements HouseholdStore
         if ($this->joinMembershipConflict) {
             throw new MembershipAlreadyExists();
         }
-        $this->memberships[$userId] = [
+        if (isset($this->memberships[$householdId . ':' . $userId])) throw new MembershipAlreadyExists();
+        $this->memberships[$householdId . ':' . $userId] = [
             'household_id' => $householdId,
             'user_id' => $userId,
             'role' => 'member',
@@ -109,8 +122,7 @@ final class InMemoryHouseholdStore implements HouseholdStore
 
     public function member(int $householdId, int $userId): ?array
     {
-        $membership = $this->memberships[$userId] ?? null;
-        return $membership !== null && $membership['household_id'] === $householdId ? $membership : null;
+        return $this->memberships[$householdId . ':' . $userId] ?? null;
     }
 
     public function replaceInviteHash(int $householdId, string $inviteHash): void
@@ -125,12 +137,22 @@ final class InMemoryHouseholdStore implements HouseholdStore
 
     public function removeMember(int $householdId, int $userId): bool
     {
-        $membership = $this->memberships[$userId] ?? null;
-        if ($membership === null || $membership['household_id'] !== $householdId) {
+        $key = $householdId . ':' . $userId;
+        if (!isset($this->memberships[$key]) || $this->memberships[$key]['role'] === 'owner') {
             return false;
         }
 
-        unset($this->memberships[$userId]);
+        unset($this->memberships[$key]);
+        return true;
+    }
+
+    public function deleteHousehold(int $householdId): bool
+    {
+        if (!isset($this->households[$householdId])) return false;
+        unset($this->households[$householdId]);
+        foreach ($this->memberships as $key => $member) {
+            if ($member['household_id'] === $householdId) unset($this->memberships[$key]);
+        }
         return true;
     }
 }

@@ -21,29 +21,32 @@ final class ReminderService
         $this->sender = $sender;
         $this->guard = $guard;
     }
-    /** @return array{task_due:bool,inventory_expiry:bool} */
+    /** @return array{task_due:bool,inventory_expiry:bool,expiry_days:int} */
     public function preferences(AuthContext $context)
     {
         $householdId = $this->guard->requireMembership($context);
         return $this->notifications->preferences($householdId, $context->userId);
     }
-    /** @return array{task_due:bool,inventory_expiry:bool} */
+    /** @return array{task_due:bool,inventory_expiry:bool,expiry_days:int} */
     public function updatePreferences(AuthContext $context, array $payload)
     {
         $householdId = $this->guard->requireMembership($context);
         $errors = [];
-        if (!array_key_exists('task_due', $payload) && !array_key_exists('inventory_expiry', $payload)) {
-            $errors['payload'] = 'Provide task_due or inventory_expiry.';
+        if (!array_key_exists('task_due', $payload) && !array_key_exists('inventory_expiry', $payload) && !array_key_exists('expiry_days', $payload)) {
+            $errors['payload'] = 'Provide task_due, inventory_expiry, or expiry_days.';
         }
         foreach (['task_due', 'inventory_expiry'] as $field) {
             if (array_key_exists($field, $payload) && !is_bool($payload[$field])) {
                 $errors[$field] = 'Must be boolean.';
             }
         }
+        if (array_key_exists('expiry_days', $payload) && (!is_int($payload['expiry_days']) || $payload['expiry_days'] < 0 || $payload['expiry_days'] > 365)) {
+            $errors['expiry_days'] = 'Must be an integer from 0 to 365.';
+        }
         if ($errors !== []) {
             throw new ApiException(422, 'VALIDATION_FAILED', 'Notification preferences are invalid.', $errors);
         }
-        $this->notifications->updatePreferences($householdId, $context->userId, isset($payload['task_due']) ? $payload['task_due'] : null, isset($payload['inventory_expiry']) ? $payload['inventory_expiry'] : null);
+        $this->notifications->updatePreferences($householdId, $context->userId, isset($payload['task_due']) ? $payload['task_due'] : null, isset($payload['inventory_expiry']) ? $payload['inventory_expiry'] : null, isset($payload['expiry_days']) ? $payload['expiry_days'] : null);
         return $this->notifications->preferences($householdId, $context->userId);
     }
     /** @return array{accepted:bool,grant_id:?int} */
@@ -76,10 +79,9 @@ final class ReminderService
         $timezone = new DateTimeZone('Asia/Shanghai');
         $local = $now->setTimezone($timezone);
         $date = $local->format('Y-m-d');
-        $through = $local->modify('+3 days')->format('Y-m-d');
         $scheduled = (new DateTimeImmutable($date . ' 09:00:00', $timezone))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.u');
         $count = 0;
-        foreach ($this->notifications->expiryRecipients($date, $through) as $recipient) {
+        foreach ($this->notifications->expiryRecipients($date) as $recipient) {
             $parts = array_map(static function (array $item) {
                 return $item['name'] . '(' . $item['expires_on'] . ')';
             }, $recipient['items']);

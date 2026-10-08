@@ -1,11 +1,13 @@
 function app() { return getApp(); }
 
 Page({
-  data: { householdName: '', inviteCode: '', working: false, error: '', lastAction: '' },
+  data: { householdName: '', inviteCode: '', working: false, error: '', lastAction: '', fromSettings: false },
+
+  onLoad(options) { this.setData({ fromSettings: options && options.from === 'settings' }); },
 
   onShow() {
     const session = app().globalData.session && app().globalData.session.get();
-    if (session && session.household) wx.switchTab({ url: '/pages/recipes/index' });
+    if (session && session.household && !this.data.fromSettings) wx.switchTab({ url: '/pages/recipes/index' });
   },
 
   onNameChange(event) { this.setData({ householdName: event.detail.value, error: '' }); },
@@ -33,6 +35,7 @@ Page({
     try {
       const result = await action();
       if (result.invite_code) app().globalData.initialInviteCode = result.invite_code;
+      app().globalData.session.patch({ household: result.household });
       await app().refreshHousehold();
       wx.reLaunch({ url: '/pages/recipes/index' });
     } catch (error) {

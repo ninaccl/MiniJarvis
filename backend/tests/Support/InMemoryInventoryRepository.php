@@ -20,6 +20,7 @@ final class InMemoryInventoryRepository implements InventoryRepository
     {
         return array_values(array_filter($this->batches, static fn (array $batch): bool =>
             $batch['household_id'] === $householdId
+            && empty($batch['deleted_at'])
             && ($query === '' || str_contains(strtolower($batch['ingredient_name']), strtolower($query)))
         ));
     }
@@ -27,7 +28,7 @@ final class InMemoryInventoryRepository implements InventoryRepository
     public function findBatch(int $householdId, int $batchId, bool $forUpdate = false): ?array
     {
         $batch = $this->batches[$batchId] ?? null;
-        return $batch !== null && $batch['household_id'] === $householdId ? $batch : null;
+        return $batch !== null && $batch['household_id'] === $householdId && empty($batch['deleted_at']) ? $batch : null;
     }
 
     public function createBatch(int $householdId, int $userId, array $batch): int
@@ -74,6 +75,13 @@ final class InMemoryInventoryRepository implements InventoryRepository
         return $id;
     }
 
+    public function deleteBatch($householdId, $batchId)
+    {
+        if ($this->findBatch($householdId, $batchId) === null) return false;
+        $this->batches[$batchId]['deleted_at'] = '2026-09-13T00:00:00.000000Z';
+        return true;
+    }
+
     public function listMovements(int $householdId, int $limit, int $offset): array
     {
         $items = array_values(array_filter($this->movements, static fn (array $row): bool => $row['household_id'] === $householdId));
@@ -85,6 +93,7 @@ final class InMemoryInventoryRepository implements InventoryRepository
     {
         return array_values(array_filter($this->batches, static fn (array $batch): bool =>
             $batch['household_id'] === $householdId
+            && empty($batch['deleted_at'])
             && (float) $batch['base_quantity'] > 0
             && ($batch['expiry_date'] === null || $batch['expiry_date'] >= $today)
         ));

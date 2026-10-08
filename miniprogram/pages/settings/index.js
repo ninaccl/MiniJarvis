@@ -7,7 +7,7 @@ function confirm(content) {
 }
 
 Page({
-  data: { loading: true, error: '', household: null, members: [], preferences: { task_due: false, inventory_expiry: false }, inviteCode: '', working: false },
+  data: { loading: true, error: '', household: null, households: [], members: [], preferences: { task_due: false, inventory_expiry: false, expiry_days: 15 }, expiryDaysInput: '15', inviteCode: '', working: false },
 
   onShow() { this.load(); },
 
@@ -16,9 +16,10 @@ Page({
     if (!session) return;
     this.setData({ loading: true, error: '' });
     try {
-      const [current, preferences] = await Promise.all([
+      const [current, preferences, listed] = await Promise.all([
         app().globalData.api.get('/households/current'),
         app().globalData.api.get('/notifications/preferences'),
+        app().globalData.api.get('/households', { includeHousehold: false }),
       ]);
       const members = (current.members || []).map((member) => ({
         ...member,
@@ -26,11 +27,48 @@ Page({
       }));
       app().globalData.members = members;
       app().globalData.session.patch({ household: current.household });
-      this.setData({ household: current.household, members, preferences, inviteCode: app().globalData.initialInviteCode || '', loading: false });
+      this.setData({ household: current.household, households: listed.households || [], members, preferences, expiryDaysInput: String(preferences.expiry_days), inviteCode: app().globalData.initialInviteCode || '', loading: false });
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'HOUSEHOLD_MEMBERSHIP_REQUIRED') return wx.reLaunch({ url: '/pages/onboarding/index' });
+      if (error instanceof ApiError && error.code === 'HOUSEHOLD_MEMBERSHIP_REQUIRED') {
+        try {
+          const current = await app().refreshHousehold();
+          return wx.reLaunch({ url: current ? '/pages/recipes/index' : '/pages/onboarding/index' });
+        } catch (_) { /* Show the original error below. */ }
+      }
       this.setData({ error: error.message || '设置加载失败。', loading: false });
     }
+  },
+
+  addHousehold() { wx.navigateTo({ url: '/pages/onboarding/index?from=settings' }); },
+
+  async switchHousehold(event) {
+    const household = this.data.households.find((item) => item.id === Number(event.currentTarget.dataset.id));
+    if (!household || household.id === this.data.household.id) return;
+    await app().selectHousehold(household);
+    this.setData({ inviteCode: '' });
+    wx.switchTab({ url: '/pages/recipes/index' });
+  },
+
+  async leaveHousehold() {
+    if (!(await confirm(`确定退出「${this.data.household.name}」吗？`))) return;
+    await this.finishMembership(() => app().globalData.api.delete('/households/current/membership'));
+  },
+
+  async dissolveHousehold() {
+    if (!(await confirm(`确定解散「${this.data.household.name}」吗？家庭内全部数据将被永久删除。`))) return;
+    await this.finishMembership(() => app().globalData.api.delete('/households/current'));
+  },
+
+  async finishMembership(action) {
+    this.setData({ working: true });
+    try {
+      await action();
+      app().globalData.session.patch({ household: null });
+      const current = await app().refreshHousehold();
+      app().globalData.initialInviteCode = '';
+      wx.reLaunch({ url: current ? '/pages/recipes/index' : '/pages/onboarding/index' });
+    } catch (error) { wx.showToast({ title: error.message || '操作失败', icon: 'none' }); }
+    finally { this.setData({ working: false }); }
   },
 
   async resetInvite() {
@@ -59,6 +97,19 @@ Page({
       const preferences = await app().globalData.api.patch('/notifications/preferences', { [key]: value });
       this.setData({ preferences });
     } catch (error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
+  },
+  expiryDaysInput(event) { this.setData({ expiryDaysInput: event.detail.value }); },
+
+  async saveExpiryDays() {
+    const raw = String(this.data.expiryDaysInput).trim();
+    if (!/^(0|[1-9][0-9]*)$/.test(raw) || Number(raw) > 365) return wx.showToast({ title: '请输入 0–365 天', icon: 'none' });
+    this.setData({ working: true });
+    try {
+      const preferences = await app().globalData.api.patch('/notifications/preferences', { expiry_days: Number(raw) });
+      this.setData({ preferences, expiryDaysInput: String(preferences.expiry_days) });
+      wx.showToast({ title: '已保存', icon: 'success' });
+    } catch (error) { wx.showToast({ title: error.message || '保存失败', icon: 'none' }); }
+    finally { this.setData({ working: false }); }
   },
 
   requestSubscription(event) {

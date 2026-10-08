@@ -14,7 +14,7 @@ final class PdoConstraintMapperTest extends TestCase
 {
     public function testMembershipUniqueConstraintMapsToDomainConflict(): void
     {
-        $exception = $this->duplicate('uq_household_members_user');
+        $exception = $this->duplicate('uq_household_members_household_user');
 
         $this->expectException(MembershipAlreadyExists::class);
         PdoConstraintMapper::rethrow($exception);

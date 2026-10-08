@@ -58,6 +58,17 @@ test('normalizes successful and failed backend envelopes into data or a useful e
   );
 });
 
+test('requests use the selected household and household listing bypasses selection', async () => {
+  const wx = createWxDouble();
+  const session = createSessionStore(wx);
+  session.set({ token: 'token', user: { id: 2 }, household: { id: 9 } });
+  const api = createApiClient({ wx, baseUrl: 'https://api.example.test/api/v1', session });
+  await api.get('/recipes');
+  await api.get('/households', { includeHousehold: false });
+  assert.equal(wx.calls.requests[0].header['X-Household-Id'], '9');
+  assert.equal(wx.calls.requests[1].header['X-Household-Id'], undefined);
+});
+
 test('a 401 refreshes auth once and exposes the retried client result', async () => {
   const wx = createWxDouble({ requests: [
     { statusCode: 401, data: { success: false, error: { code: 'AUTHENTICATION_REQUIRED', message: 'Expired.' } } },
