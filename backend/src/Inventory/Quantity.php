@@ -1,16 +1,12 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Inventory;
 
 use InvalidArgumentException;
-
 final class Quantity
 {
-    private const SCALE = 10000;
-
-    public static function format(float $value): string
+    const SCALE = 10000;
+    public static function format($value)
     {
         if (!is_finite($value) || abs($value) >= 100000000000000) {
             throw new InvalidArgumentException('Base quantity is outside DECIMAL(18,4).');
@@ -19,24 +15,20 @@ final class Quantity
         $formatted = rtrim(rtrim($formatted, '0'), '.');
         return $formatted === '-0' || $formatted === '' ? '0' : $formatted;
     }
-
-    public static function add(string $left, string $right): string
+    public static function add($left, $right)
     {
         return self::format((float) $left + (float) $right);
     }
-
-    public static function subtract(string $left, string $right): string
+    public static function subtract($left, $right)
     {
         return self::format((float) $left - (float) $right);
     }
-
-    public static function compare(string $left, string $right): int
+    public static function compare($left, $right)
     {
         $difference = (int) round(((float) $left - (float) $right) * self::SCALE);
-        return $difference <=> 0;
+        return $difference < 0 ? -1 : ($difference > 0 ? 1 : 0);
     }
-
-    public static function negative(string $value): string
+    public static function negative($value)
     {
         return self::format(-(float) $value);
     }

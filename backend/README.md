@@ -1,28 +1,26 @@
 # Backend API
 
-Native PHP 8.2, PDO, and a small front controller provide the API without a framework or ORM. Composer supplies PSR-4 autoloading and loads `vlucas/phpdotenv`; PHPUnit is development-only.
+Native PHP 5.5.30, PDO, and a small front controller provide the API without a framework or ORM. `bootstrap.php` loads application classes and `.env` configuration without production Composer dependencies.
 
 Complete frontend-facing endpoint/payload contracts are in [API.md](API.md). Production TLS/FPM permissions, cron, local mock login and WeChat setup are in [deploy/README.md](deploy/README.md), with [nginx.conf.example](deploy/nginx.conf.example).
 
 ## Requirements
 
-- PHP 8.2+
+- PHP 5.5.30
 - PHP extensions: `curl`, `fileinfo`, `json`, `mbstring`, `PDO`, `pdo_mysql`
-- Composer 2
-- MySQL 8.0 using `utf8mb4`
+- MySQL 5.7.25 or later in the 5.7 series, using `utf8mb4`
 - Nginx and PHP-FPM for production
-- An executable PHP CLI binary and enabled `proc_open` for deadline-bounded DNS resolution
+- `dns_get_record`; if `proc_open` is available, an executable PHP CLI binary also enables deadline-bounded DNS resolution
 
 ## Setup
 
 ```sh
 cp .env.example .env
-composer install
-mysql -u root -p < ../database/init.sql
+mysql --default-character-set=utf8mb4 -u root -p < ../database/init.sql
 php -S 127.0.0.1:8080 -t public
 ```
 
-The application sets every PDO connection to UTC. Configure the database host, credentials, calendar timezone, and WeChat application credentials in `.env`; never commit that file. A deployment example is in `deploy/nginx.conf`.
+The application sets every PDO connection to UTF-8 and UTC. It issues `SET NAMES utf8mb4` after connecting because the PHP 5.5 MySQL client on the deployed host rejects `charset=utf8mb4` in the PDO DSN. JSON columns are cast to text in SELECT queries for the same older client. Configure the database host, credentials, calendar timezone, and WeChat application credentials in `.env`; never commit that file. A deployment example is in `deploy/nginx.conf`.
 
 ## Time convention
 
@@ -62,15 +60,16 @@ Pass the API token as `Authorization: Bearer <token>`. The backend intentionally
 | POST | `/api/v1/link-previews` | Member | Fetch a guarded best-effort external-link preview |
 | GET | `/api/v1/link-previews/{token}/image` | Creating member | Read an unexpired temporary preview image |
 | POST | `/api/v1/link-previews/{token}/adopt` | Creating member | Adopt a temporary preview image once |
-| GET | `/api/v1/inventory?q=&status=all\|active\|expiring\|expired` | Member | List household inventory batches |
+| GET | `/api/v1/inventory?q=&status=all\|active\|expiring\|expired&expiry_days=15` | Member | List household inventory batches with a 0–365 day expiry window |
 | POST | `/api/v1/inventory/batches` | Member | Create a batch and its initial movement |
 | PATCH | `/api/v1/inventory/batches/{id}` | Member | Update expiry date and/or note |
+| DELETE | `/api/v1/inventory/batches/{id}` | Member | Hide a batch while retaining its history |
 | POST | `/api/v1/inventory/batches/{id}/movements` | Member | Add, consume, or set batch stock |
 | GET | `/api/v1/inventory/movements?page=&page_size=` | Member | Read immutable movement history |
 | GET | `/api/v1/recipes/matches?count=` | Member | Greedily match 1–10 recipes (default 2) |
 | GET, POST | `/api/v1/tasks` | Member | Filter household tasks or create a task/subtask |
 | GET, PATCH, DELETE | `/api/v1/tasks/{id}` | Member | Read, update/link completion, or cascade-delete a task |
-| GET, PATCH | `/api/v1/notifications/preferences` | Member | Read or update task/expiry notification preferences |
+| GET, PATCH | `/api/v1/notifications/preferences` | Member | Read or update task/expiry notification preferences and expiry days |
 | POST | `/api/v1/notifications/subscription-grants` | Member | Record one WeChat subscription prompt result |
 
 Success responses are `{"success":true,"data":...,"meta":...}` (with optional `meta`). Failures are `{"success":false,"error":{"code":"...","message":"...","fields":...}}` (with optional `fields`). Expected client failures use 401, 403, 404, 409, or 422; unhandled failures use 500 without exposing internals.
@@ -93,7 +92,7 @@ Recipe writes replace ingredients and links in the same transaction as the recip
 
 Uploads ignore original filenames, sniff content with `fileinfo`, and use random names below `public/uploads/YYYY/MM`. The HTTP mover verifies `is_uploaded_file`; tests replace only that movement boundary.
 
-Link previews accept only HTTPS destinations on exact configured hosts or true subdomains. Every page, image, and redirect hop is resolved and all A/AAAA answers must be public; cURL follows no redirects itself and pins each request to the validated answers. `PHP_CLI_BINARY` selects an executable CLI (default `PHP_BINDIR/php`); a no-shell child resolver plus `proc_open` enforces the remaining shared deadline around otherwise-blocking system DNS. Page bodies are capped at 1 MiB, images at 5 MiB, and requests use 3-second connection/8-second total timeouts without cookies or authorization headers. Temporary files are never web-addressable: an authenticated opaque-token API serves them with private caching, creator/household checks, and 24-hour expiry. Run this at least hourly:
+Link previews accept only HTTPS destinations on exact configured hosts or true subdomains. Every page, image, and redirect hop is resolved and all A/AAAA answers must be public; cURL follows no redirects itself and pins each request to the validated answers. `PHP_CLI_BINARY` selects an executable CLI (default `PHP_BINDIR/php`); a child resolver with escaped command arguments and `proc_open` enforces the remaining shared deadline around otherwise-blocking system DNS when available. Shared hosts that disable `proc_open` use in-process DNS, then apply the same public-address checks; DNS lookup duration depends on the host resolver. Page bodies are capped at 1 MiB, images at 5 MiB, and requests use 3-second connection/8-second total timeouts without cookies or authorization headers. Temporary files are never web-addressable: an authenticated opaque-token API serves them with private caching, creator/household checks, and 24-hour expiry. Run this at least hourly:
 
 ```sh
 php bin/cleanup-previews.php
@@ -107,11 +106,7 @@ Recipe matching is read-only. It aggregates compatible non-expired batches, scor
 
 ## Tests
 
-```sh
-composer test
-```
-
-Tests run real HTTP envelope and service behavior with in-memory stores at the PDO boundary and a fake at the WeChat network boundary.
+Run `php tests/php55/bootstrap-smoke.php` and `PHP55_BIN=php sh tests/php55/lint.sh` using PHP 5.5.30. The older PHPUnit suite remains as behavioral reference material but is not the PHP 5.5 acceptance gate.
 
 ## Reminder runner
 
@@ -121,4 +116,4 @@ Configure the two WeChat subscription template IDs, their field keys, mini-progr
 */5 * * * * cd /path/to/backend && /usr/bin/php bin/send-reminders.php
 ```
 
-The runner groups positive inventory batches expiring today through three days ahead by the Asia/Shanghai calendar and schedules that day's summary for 09:00 local time. Task and job instants remain UTC. A missing one-time grant cancels that job as an observable `skipped_no_grant` outcome without treating it as an operational error.
+The runner groups positive inventory batches expiring today through each member's configured expiry window (15 days by default) by the Asia/Shanghai calendar and schedules that day's summary for 09:00 local time. Task and job instants remain UTC. A missing one-time grant cancels that job as an observable `skipped_no_grant` outcome without treating it as an operational error.

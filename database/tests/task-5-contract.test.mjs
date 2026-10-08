@@ -7,12 +7,12 @@ const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const application = read('backend/src/Http/Application.php');
 const bootstrap = read('backend/public/index.php');
 const config = read('backend/src/Config/Config.php');
-const schema = read('database/init.sql').replace(/\s+/g, ' ');
+const schema = read('database/init.sql').replaceAll('jarvis_', '').replace(/\s+/g, ' ');
 
 function table(name) {
   const match = schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${name} \\((.*?)\\) ENGINE=InnoDB;`));
   assert.ok(match, `missing table ${name}`);
-  return match[1];
+  return match[1].replaceAll('jarvis_', '');
 }
 
 test('task and notification routes are authenticated and composed', () => {
@@ -33,7 +33,7 @@ test('notification persistence exposes idempotent events and exact delivery stat
   const jobs = table('notification_jobs');
   assert.match(jobs, /event_key VARCHAR\(191\).*NOT NULL/);
   assert.match(jobs, /UNIQUE KEY uq_notification_jobs_event_key \(event_key\)/);
-  assert.match(jobs, /scheduled_at TIMESTAMP\(6\) NOT NULL/);
+  assert.match(jobs, /scheduled_at DATETIME\(6\) NOT NULL/);
   assert.match(jobs, /status IN \('pending', 'sending', 'sent', 'permanent_failed', 'cancelled'\)/);
   assert.match(jobs, /payload_snapshot JSON NOT NULL/);
 
@@ -56,13 +56,13 @@ test('reminder implementation contains concurrency-safe claim, retry, stale-job,
   const service = read('backend/src/Notification/ReminderService.php');
   const taskService = read('backend/src/Task/TaskService.php');
 
-  assert.match(repository, /FOR UPDATE SKIP LOCKED/);
+  assert.match(repository, /ORDER BY j\.scheduled_at, j\.id LIMIT 1 FOR UPDATE/);
   assert.match(repository, /status = 'available'.*FOR UPDATE/s);
   assert.match(service, /attempts.*>= 3/s);
   assert.match(service, /skipped_no_grant/);
   assert.match(repository, /restoreGrant/);
   assert.match(service, /Asia\/Shanghai/);
-  assert.match(service, /modify\('\+3 days'\)/);
+  assert.match(repository, /COALESCE\(p\.expiry_days, 15\)/);
   assert.match(taskService, /modify\('-24 hours'\)/);
   assert.match(taskService, /cancelTaskJobs/);
   assert.match(taskService, /task_due:.*due_at/s);

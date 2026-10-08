@@ -16,11 +16,11 @@ final class InMemoryNotificationRepository implements NotificationRepository
     private int $nextGrant = 1;
     private int $nextJob = 1;
 
-    public function preferences(int $householdId, int $userId): array { return $this->preferences["$householdId:$userId"] ?? ['task_due' => true, 'inventory_expiry' => true]; }
-    public function updatePreferences(int $householdId, int $userId, ?bool $taskDue, ?bool $inventoryExpiry): void
+    public function preferences(int $householdId, int $userId): array { return $this->preferences["$householdId:$userId"] ?? ['task_due' => true, 'inventory_expiry' => true, 'expiry_days' => 15]; }
+    public function updatePreferences(int $householdId, int $userId, ?bool $taskDue, ?bool $inventoryExpiry, $expiryDays = null): void
     {
         $current = $this->preferences($householdId, $userId);
-        $this->preferences["$householdId:$userId"] = ['task_due' => $taskDue ?? $current['task_due'], 'inventory_expiry' => $inventoryExpiry ?? $current['inventory_expiry']];
+        $this->preferences["$householdId:$userId"] = ['task_due' => $taskDue ?? $current['task_due'], 'inventory_expiry' => $inventoryExpiry ?? $current['inventory_expiry'], 'expiry_days' => $expiryDays ?? $current['expiry_days']];
     }
     public function addGrant(int $householdId, int $userId, string $templateType): int
     {
@@ -45,7 +45,7 @@ final class InMemoryNotificationRepository implements NotificationRepository
         $id = $this->nextJob++;
         $this->jobs[$id] = ['id' => $id, 'household_id' => $householdId, 'user_id' => $userId, 'event_key' => $eventKey, 'job_type' => $jobType, 'scheduled_at' => $scheduledAt, 'payload' => $payload, 'attempts' => 0, 'status' => 'pending', 'last_error' => null];
     }
-    public function expiryRecipients(string $fromDate, string $throughDate): array { return $this->expiry; }
+    public function expiryRecipients(string $fromDate): array { return $this->expiry; }
     public function claimDueJob(string $nowUtc): ?array
     {
         foreach ($this->jobs as &$job) if ($job['status'] === 'pending' && $job['attempts'] < 3 && $job['scheduled_at'] <= $nowUtc) { $job['status'] = 'sending'; return $job + ['openid' => 'openid']; }

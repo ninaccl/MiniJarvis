@@ -61,6 +61,7 @@ function createApiClient({ wx, baseUrl, session, reauthenticate }) {
     const current = session.get();
     const headers = { ...(request.headers || {}) };
     if (request.includeAuth !== false && current && current.token) headers.Authorization = `Bearer ${current.token}`;
+    if (request.includeHousehold !== false && current && current.household && current.household.id) headers['X-Household-Id'] = String(current.household.id);
     if (kind !== 'UPLOAD') headers['content-type'] = 'application/json';
     const options = kind === 'UPLOAD'
       ? { url: joinUrl(baseUrl, request.path), filePath: request.filePath, name: request.name || 'file', formData: request.formData || {}, header: headers }

@@ -1,12 +1,11 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\LinkPreview;
 
 final class DnsCommandFactory
 {
-    private const PROGRAM = <<<'PHP'
+    private $cliBinary;
+    const PROGRAM = <<<'PHP'
 $records = dns_get_record($argv[1], DNS_A | DNS_AAAA);
 $addresses = [];
 if (is_array($records)) {
@@ -15,21 +14,19 @@ if (is_array($records)) {
         if (isset($record['ipv6'])) $addresses[] = (string) $record['ipv6'];
     }
 }
-fwrite(STDOUT, json_encode(array_values(array_unique($addresses)), JSON_THROW_ON_ERROR));
+fwrite(STDOUT, json_encode(array_values(array_unique($addresses))));
 PHP;
-
-    public function __construct(private readonly string $cliBinary)
+    public function __construct($cliBinary)
     {
+        $this->cliBinary = $cliBinary;
     }
-
-    public function binary(): string
+    public function binary()
     {
         return $this->cliBinary;
     }
-
     /** @return list<string> */
-    public function forHost(string $host): array
+    public function forHost($host)
     {
-        return [$this->cliBinary, '-r', self::PROGRAM, $host];
+        return escapeshellarg($this->cliBinary) . ' -r ' . escapeshellarg(self::PROGRAM) . ' ' . escapeshellarg($host);
     }
 }

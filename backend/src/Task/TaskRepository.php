@@ -1,26 +1,24 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Task;
 
 interface TaskRepository
 {
     /** First operation in every task mutation transaction; serializes household task trees. */
-    public function lockHousehold(int $householdId): void;
+    public function lockHousehold($householdId);
     /** @return list<array<string,mixed>> */
-    public function listTasks(int $householdId, string $status, ?int $assigneeUserId): array;
+    public function listTasks($householdId, $status, $assigneeUserId);
     /** @return array<string,mixed>|null */
-    public function findTask(int $householdId, int $taskId, bool $forUpdate = false): ?array;
+    public function findTask($householdId, $taskId, $forUpdate = false);
     /** @return list<array<string,mixed>> */
-    public function children(int $householdId, int $parentId, bool $forUpdate = false): array;
+    public function children($householdId, $parentId, $forUpdate = false);
     /** @param array<string,mixed> $task */
-    public function createTask(int $householdId, int $creatorUserId, array $task): int;
+    public function createTask($householdId, $creatorUserId, array $task);
     /** @param array<string,mixed> $fields */
-    public function updateTask(int $householdId, int $taskId, array $fields): void;
-    public function setStatus(int $householdId, int $taskId, string $status): void;
-    public function setChildrenStatus(int $householdId, int $parentId, string $status): void;
-    public function allChildrenCompleted(int $householdId, int $parentId): bool;
-    public function hasChildren(int $householdId, int $taskId): bool;
-    public function deleteTask(int $householdId, int $taskId): bool;
+    public function updateTask($householdId, $taskId, array $fields);
+    public function setStatus($householdId, $taskId, $status);
+    public function setChildrenStatus($householdId, $parentId, $status);
+    public function allChildrenCompleted($householdId, $parentId);
+    public function hasChildren($householdId, $taskId);
+    public function deleteTask($householdId, $taskId);
 }

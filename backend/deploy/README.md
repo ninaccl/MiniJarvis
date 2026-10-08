@@ -1,14 +1,13 @@
 # 部署与运行
 
-要求 PHP 8.2+、Composer 2、MySQL 8.0、Nginx、PHP-FPM。PHP 扩展为 curl、fileinfo、json、mbstring、PDO、pdo_mysql；安装 PHPUnit 的机器还需其要求的 XML/DOM 扩展。链接解析器需要可执行的 PHP CLI 和启用的 proc_open。
+要求 PHP 5.5.30、MySQL 5.7.25、Nginx、PHP-FPM。PHP 扩展为 curl、fileinfo、json、mbstring、PDO、pdo_mysql。链接解析器使用 `dns_get_record`；若 `proc_open` 可用，还需可执行的 PHP CLI 以限制 DNS 子进程耗时。现网禁用了 `proc_open`，应用使用进程内 DNS，解析耗时由主机 DNS 配置决定。生产运行不依赖 Composer 或 `vendor/`。已确认现网为 PHP 5.5.30、MySQL 5.7.25-log；旧版 MySQL 客户端要求应用在建立 PDO 连接后执行 `SET NAMES utf8mb4`。
 
 以下路径以 `/srv/jarvis`、PHP-FPM 用户 `www-data` 为例，按实际服务器调整。部署前备份现有数据库；初始化脚本用于首次安装，不是数据库迁移工具。
 
 ```sh
 cd /srv/jarvis/backend
 cp .env.example .env
-composer install --no-dev --optimize-autoloader
-mysql -u root -p < ../database/init.sql
+mysql --default-character-set=utf8mb4 -u root -p < ../database/init.sql
 ```
 
 脚本创建 `jarvis_family` 数据库和种子分类、单位。为应用单独创建数据库账号并授予该库所需的 SELECT、INSERT、UPDATE、DELETE 权限；将凭据写入 `.env`。生产设 `APP_ENV=production`，保持 `APP_DEBUG=false` 和 `CALENDAR_TIMEZONE=Asia/Shanghai`。填写微信 AppID/Secret。`PHP_CLI_BINARY` 必须指向真正的 CLI，不能使用 FPM 二进制。
@@ -53,11 +52,16 @@ curl --fail https://kitchen-api.example.com/api/v1/health
 ```sh
 cd backend
 cp .env.example .env
-composer install
-mysql -u root -p < ../database/init.sql
+mysql --default-character-set=utf8mb4 -u root -p < ../database/init.sql
 php -S 127.0.0.1:8080 -t public
 ```
 
 在开发者工具导入 `miniprogram/`，按其 README 配置 AppID 与 `env.js`。本地 `baseUrl` 可设 `http://127.0.0.1:8080/api/v1`，仅开发工具开启本地域名校验豁免。显式配置 `localLoginCode: 'dev:alice'`、后端 `APP_ENV=local` 以稳定模拟同一用户；切换为 `dev:bob` 并重新编译可测试加入家庭。此设置默认空，正式构建必须为空。后端在非 local 环境拒绝任何 dev: 登录，不可用此功能替代生产 wx.login。
 
-完整部署后的验收见 `../../miniprogram/ACCEPTANCE.md`，接口见 `../API.md`。开发依赖可用时运行 `composer test`；小程序运行 `node --test miniprogram/tests/*.test.js miniprogram/tests/*.test.cjs`（仓库根目录）。
+完整部署后的验收见 `../../miniprogram/ACCEPTANCE.md`，接口见 `../API.md`。在 PHP 5.5.30 下运行 `php tests/php55/bootstrap-smoke.php`、`php tests/php55/core-smoke.php`、`php tests/php55/domain-smoke.php`、`php tests/php55/class-load.php` 和 `PHP55_BIN=php sh tests/php55/lint.sh`，并在一次性 MySQL 5.7 测试库运行 `php tests/php55/mysql57-smoke.php`；小程序运行 `node --test miniprogram/tests/*.test.js miniprogram/tests/*.test.cjs`（仓库根目录）。
+
+## 当前共享主机的代码更新
+
+公网域名是 `www.sunhx.cn`；FTP 使用单独提供的临时主机名。将经过审阅的提交中 `backend/bootstrap.php`、`backend/src/`、`backend/public/index.php` 和 `backend/bin/` 上传到 FTP 的 `/htdocs/backend/` 对应路径。上传前先下载并保存这些远端文件的备份，记录备份时间与提交号。不要上传本地 `.env`、`vendor/`、测试文件或 `public/uploads/`，不要运行 `database/init.sql`，也不要修改现有业务数据。
+
+上传后通过 `https://www.sunhx.cn/backend/public/index.php/api/v1/health` 验证启动，再使用实际微信登录令牌检查菜谱列表及各业务分组的代表请求；同时验证两个 CLI 定时程序的执行结果。若出现异常，用备份恢复上述代码文件并再次检查健康接口。链接预览在此主机使用 `dns_get_record` 回退路径，因为 `proc_open` 被禁用；若主机 DNS 阻塞，解析耗时受主机 DNS 配置影响。

@@ -1,6 +1,6 @@
 CREATE DATABASE IF NOT EXISTS jarvis_family
   CHARACTER SET utf8mb4
-  COLLATE utf8mb4_0900_ai_ci;
+  COLLATE utf8mb4_unicode_ci;
 
 USE jarvis_family;
 
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS jarvis_api_sessions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
   token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  expires_at TIMESTAMP(6) NOT NULL,
+  expires_at DATETIME(6) NOT NULL,
   revoked_at TIMESTAMP(6) NULL,
   created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS jarvis_household_members (
   role VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'member',
   joined_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
-  UNIQUE KEY uq_household_members_user (user_id),
+  KEY idx_household_members_user (user_id),
   UNIQUE KEY uq_household_members_household_user (household_id, user_id),
   KEY idx_household_members_tenant_role (household_id, role),
   CONSTRAINT fk_household_members_household FOREIGN KEY (household_id) REFERENCES jarvis_households (id) ON DELETE CASCADE,
@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS jarvis_link_previews (
   image_mime_type VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
   site_name VARCHAR(255) NULL,
   fetched_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  expires_at TIMESTAMP(6) NOT NULL,
+  expires_at DATETIME(6) NOT NULL,
   adopted_at TIMESTAMP(6) NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uq_link_previews_token_hash (token_hash),
@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS jarvis_inventory_batches (
   opened_at TIMESTAMP(6) NULL,
   expires_on DATE NULL,
   note VARCHAR(255) NULL,
+  deleted_at TIMESTAMP(6) NULL,
   created_by BIGINT UNSIGNED NOT NULL,
   created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -383,6 +384,7 @@ CREATE TABLE IF NOT EXISTS jarvis_notification_preferences (
   user_id BIGINT UNSIGNED NOT NULL,
   task_due BOOLEAN NOT NULL DEFAULT TRUE,
   inventory_expiry BOOLEAN NOT NULL DEFAULT TRUE,
+  expiry_days SMALLINT UNSIGNED NOT NULL DEFAULT 15,
   created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
@@ -414,7 +416,7 @@ CREATE TABLE IF NOT EXISTS jarvis_notification_jobs (
   event_key VARCHAR(191) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   job_type VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'pending',
-  scheduled_at TIMESTAMP(6) NOT NULL,
+  scheduled_at DATETIME(6) NOT NULL,
   payload_snapshot JSON NOT NULL,
   attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   last_error VARCHAR(1000) NULL,

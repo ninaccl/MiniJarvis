@@ -36,3 +36,32 @@ test('inventory history renders the API occurred_at instant in Beijing time acro
   assert.equal(vm.runInNewContext(timestamp, { item: inventory.data.history[0] }), '2026-09-14 00:30');
   assert.equal(inventory.data.history[0].occurred_at, movement.occurred_at);
 });
+
+test('inventory defaults to setting the current quantity and renders unit names in Chinese', async () => {
+  const batch = { id: 3, ingredient_id: 4, ingredient_name: '鸡蛋', base_quantity: '6', base_unit_code: 'piece', display_quantity: '6', display_unit_code: 'piece', status: 'active', expiry_date: null };
+  let requested = '';
+  global.getApp = () => ({ globalData: { api: { get: async path => { requested = path; return [batch]; } } } });
+  const inventory = page('inventory');
+  await inventory.load();
+  assert.match(requested, /expiry_days=15/);
+  assert.equal(inventory.data.batches[0].base_unit_name, '个');
+  assert.equal(inventory.data.totals[0].unit_name, '个');
+  inventory.adjust({ currentTarget: { dataset: { batch } } });
+  assert.equal(inventory.data.form.operation, 'set');
+  assert.equal(inventory.data.form.quantity, '6');
+  assert.equal(inventory.data.units[inventory.data.unitIndex].name, '个');
+});
+
+test('inventory deletion confirms, calls the batch endpoint, and refreshes the list', async () => {
+  let deleted = '';
+  let loads = 0;
+  global.wx = { showModal: ({ success }) => success({ confirm: true }) };
+  global.getApp = () => ({ globalData: { api: {
+    delete: async path => { deleted = path; },
+    get: async () => { loads += 1; return []; },
+  } } });
+  const inventory = page('inventory');
+  await inventory.remove({ currentTarget: { dataset: { batch: { id: 8, ingredient_name: '牛奶' } } } });
+  assert.equal(deleted, '/inventory/batches/8');
+  assert.equal(loads, 1);
+});

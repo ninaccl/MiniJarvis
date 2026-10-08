@@ -1,23 +1,19 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Household;
 
 use App\Auth\AuthContext;
 use App\Http\ApiException;
-
 final class TenantGuard
 {
-    public function requireMembership(AuthContext $context): int
+    public function requireMembership(AuthContext $context)
     {
         if ($context->householdId === null || $context->role === null) {
             throw new ApiException(403, 'HOUSEHOLD_MEMBERSHIP_REQUIRED', 'Household membership is required.');
         }
         return $context->householdId;
     }
-
-    public function requireOwner(AuthContext $context): int
+    public function requireOwner(AuthContext $context)
     {
         $householdId = $this->requireMembership($context);
         if ($context->role !== 'owner') {
@@ -25,8 +21,7 @@ final class TenantGuard
         }
         return $householdId;
     }
-
-    public function requireTenant(AuthContext $context, int $resourceHouseholdId): int
+    public function requireTenant(AuthContext $context, $resourceHouseholdId)
     {
         $householdId = $this->requireMembership($context);
         if ($householdId !== $resourceHouseholdId) {

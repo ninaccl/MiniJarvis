@@ -1,4 +1,6 @@
 <view class="top-bar">
-  <view><view class="title">{{title}}</view><view wx:if="{{subtitle}}" class="subtitle">{{subtitle}}</view></view>
-  <button class="avatar" aria-label="打开设置" bindtap="openSettings">{{avatar || '我'}}</button>
+  <view class="heading"><view class="title">{{title}}</view><view wx:if="{{subtitle}}" class="subtitle">{{subtitle}}</view></view>
+  <button class="avatar" aria-label="打开设置" bindtap="openSettings">
+    <view class="person-mark" aria-hidden="true"><view class="person-head"></view><view class="person-body"></view></view>
+  </button>
 </view>

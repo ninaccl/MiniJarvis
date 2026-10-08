@@ -1,1 +1,6 @@
 .inventory { min-height: 250rpx; display: flex; flex-direction: column; justify-content: center; gap: 18rpx; }.hero-title { color: #111827; font-size: 38rpx; font-weight: 700; }
+.expiry-settings-row { display: flex; min-height: 88rpx; align-items: stretch; }
+.expiry-settings-label, .expiry-settings-link { display: flex; align-items: center; font-size: 28rpx; line-height: 1.55; }
+.expiry-settings-label { flex: 1; min-width: 0; color: #6B7280; }
+.expiry-settings-link { padding: 0 12rpx; color: #007AFF; }
+.stock-actions .stock-action { flex: 1; min-width: 0; padding: 18rpx 8rpx; font-size: 26rpx; white-space: nowrap; }

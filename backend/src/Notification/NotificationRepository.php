@@ -1,29 +1,27 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Notification;
 
 interface NotificationRepository
 {
-    /** @return array{task_due:bool,inventory_expiry:bool} */
-    public function preferences(int $householdId, int $userId): array;
-    public function updatePreferences(int $householdId, int $userId, ?bool $taskDue, ?bool $inventoryExpiry): void;
-    public function addGrant(int $householdId, int $userId, string $templateType): int;
-    public function cancelTaskJobs(int $householdId, int $taskId): void;
+    /** @return array{task_due:bool,inventory_expiry:bool,expiry_days:int} */
+    public function preferences($householdId, $userId);
+    public function updatePreferences($householdId, $userId, $taskDue, $inventoryExpiry, $expiryDays = null);
+    public function addGrant($householdId, $userId, $templateType);
+    public function cancelTaskJobs($householdId, $taskId);
     /** @param array<string,mixed> $payload */
-    public function upsertJob(int $householdId, int $userId, string $eventKey, string $jobType, string $scheduledAt, array $payload): void;
+    public function upsertJob($householdId, $userId, $eventKey, $jobType, $scheduledAt, array $payload);
     /** @return list<array{household_id:int,user_id:int,items:list<array<string,mixed>>}> */
-    public function expiryRecipients(string $fromDate, string $throughDate): array;
+    public function expiryRecipients($fromDate);
     /** @return array<string,mixed>|null */
-    public function claimDueJob(string $nowUtc): ?array;
+    public function claimDueJob($nowUtc);
     /** @param array<string,mixed> $job */
-    public function taskJobIsCurrent(array $job): bool;
-    public function claimGrant(int $householdId, int $userId, string $templateType, int $jobId): ?int;
+    public function taskJobIsCurrent(array $job);
+    public function claimGrant($householdId, $userId, $templateType, $jobId);
     /** Record only an actual send attempt, after validating the task and claiming a grant. */
-    public function recordSendAttempt(int $jobId): void;
-    public function cancelClaimedJob(int $jobId): void;
-    public function markSent(int $jobId, int $grantId): void;
-    public function markTransientFailure(int $jobId, int $grantId, int $attempts, string $error): void;
-    public function markPermanentFailure(int $jobId, int $grantId, string $error): void;
+    public function recordSendAttempt($jobId);
+    public function cancelClaimedJob($jobId);
+    public function markSent($jobId, $grantId);
+    public function markTransientFailure($jobId, $grantId, $attempts, $error);
+    public function markPermanentFailure($jobId, $grantId, $error);
 }

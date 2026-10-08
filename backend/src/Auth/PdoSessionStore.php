@@ -1,46 +1,29 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Auth;
 
 use DateTimeImmutable;
 use PDO;
-
 final class PdoSessionStore implements SessionStore
 {
-    public function __construct(private readonly PDO $pdo)
+    private $pdo;
+    public function __construct(PDO $pdo)
     {
+        $this->pdo = $pdo;
     }
-
-    public function create(int $userId, string $tokenHash, DateTimeImmutable $expiresAt): void
+    public function create($userId, $tokenHash, DateTimeImmutable $expiresAt)
     {
-        $statement = $this->pdo->prepare(
-            'INSERT INTO jarvis_api_sessions (user_id, token_hash, expires_at) VALUES (:user_id, :token_hash, :expires_at)'
-        );
-        $statement->execute([
-            'user_id' => $userId,
-            'token_hash' => $tokenHash,
-            'expires_at' => $expiresAt->format('Y-m-d H:i:s.u'),
-        ]);
+        $statement = $this->pdo->prepare('INSERT INTO jarvis_api_sessions (user_id, token_hash, expires_at) VALUES (:user_id, :token_hash, :expires_at)');
+        $statement->execute(['user_id' => $userId, 'token_hash' => $tokenHash, 'expires_at' => $expiresAt->format('Y-m-d H:i:s.u')]);
     }
-
-    public function findActiveContext(string $tokenHash, DateTimeImmutable $now): ?AuthContext
+    public function findActiveContext($tokenHash, DateTimeImmutable $now, $householdId = null)
     {
-        $statement = $this->pdo->prepare(
-            'SELECT s.user_id, hm.household_id, hm.role '
-            . 'FROM jarvis_api_sessions s LEFT JOIN jarvis_household_members hm ON hm.user_id = s.user_id '
-            . 'WHERE s.token_hash = :token_hash AND s.revoked_at IS NULL AND s.expires_at > :now LIMIT 1'
-        );
-        $statement->execute(['token_hash' => $tokenHash, 'now' => $now->format('Y-m-d H:i:s.u')]);
+        $statement = $this->pdo->prepare('SELECT s.user_id, hm.household_id, hm.role ' . 'FROM jarvis_api_sessions s LEFT JOIN jarvis_household_members hm ON hm.user_id = s.user_id AND hm.household_id = COALESCE(:household_id, (SELECT MIN(m.household_id) FROM jarvis_household_members m WHERE m.user_id = s.user_id)) ' . 'WHERE s.token_hash = :token_hash AND s.revoked_at IS NULL AND s.expires_at > :now LIMIT 1');
+        $statement->execute(['token_hash' => $tokenHash, 'now' => $now->format('Y-m-d H:i:s.u'), 'household_id' => $householdId]);
         $row = $statement->fetch();
         if ($row === false) {
             return null;
         }
-        return new AuthContext(
-            (int) $row['user_id'],
-            $row['household_id'] === null ? null : (int) $row['household_id'],
-            $row['role'] === null ? null : (string) $row['role'],
-        );
+        return new AuthContext((int) $row['user_id'], $row['household_id'] === null ? null : (int) $row['household_id'], $row['role'] === null ? null : (string) $row['role']);
     }
 }

@@ -1,35 +1,33 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Recipe;
 
 interface RecipeRepository
 {
     /** @return list<array{id:int,name:string}> */
-    public function categories(): array;
-    public function categoryExists(int $categoryId): bool;
+    public function categories();
+    public function categoryExists($categoryId);
     /** @return array{code:string,display_name:string,dimension:string,base_factor:string}|null */
-    public function unit(string $code): ?array;
+    public function unit($code);
     /** @return array{items:list<array<string,mixed>>,total:int} */
-    public function list(int $householdId, string $query, ?int $categoryId, int $limit, int $offset): array;
+    public function listItems($householdId, $query, $categoryId, $limit, $offset);
     /** @return list<array<string,mixed>> */
-    public function activeForMatching(int $householdId): array;
+    public function activeForMatching($householdId);
     /** @return array<string,mixed>|null */
-    public function find(int $householdId, int $recipeId): ?array;
+    public function find($householdId, $recipeId);
     /** @return array<string,mixed>|null */
-    public function ingredient(int $householdId, int $ingredientId): ?array;
+    public function ingredient($householdId, $ingredientId);
     /** @return array<string,mixed>|null */
-    public function ingredientByNormalizedName(int $householdId, string $normalizedName): ?array;
+    public function ingredientByNormalizedName($householdId, $normalizedName);
     /** @return array<string,mixed> */
-    public function createIngredient(int $householdId, int $userId, string $name, string $normalizedName, string $defaultUnitCode): array;
+    public function createIngredient($householdId, $userId, $name, $normalizedName, $defaultUnitCode);
     /** @param array<string,mixed> $recipe */
-    public function createRecipe(int $householdId, int $userId, array $recipe): int;
+    public function createRecipe($householdId, $userId, array $recipe);
     /** @param array<string,mixed> $recipe */
-    public function updateRecipe(int $householdId, int $recipeId, array $recipe): bool;
+    public function updateRecipe($householdId, $recipeId, array $recipe);
     /** @param list<array<string,mixed>> $ingredients */
-    public function replaceIngredients(int $householdId, int $recipeId, array $ingredients): void;
+    public function replaceIngredients($householdId, $recipeId, array $ingredients);
     /** @param list<array<string,mixed>> $links */
-    public function replaceLinks(int $householdId, int $recipeId, int $userId, array $links): void;
-    public function softDelete(int $householdId, int $recipeId): bool;
+    public function replaceLinks($householdId, $recipeId, $userId, array $links);
+    public function softDelete($householdId, $recipeId);
 }

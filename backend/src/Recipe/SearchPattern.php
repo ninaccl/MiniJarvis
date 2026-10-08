@@ -1,13 +1,11 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Recipe;
 
 final class SearchPattern
 {
-    public static function contains(string $literal): string
+    public static function contains($literal)
     {
-        return '%' . strtr($literal, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']) . '%';
+        return '%' . strtr($literal, ['\\' => '\\\\', '%' => '\%', '_' => '\_']) . '%';
     }
 }

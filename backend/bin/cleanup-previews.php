@@ -1,14 +1,11 @@
 <?php
 
-declare(strict_types=1);
-
 use App\Config\Config;
 use App\Database\Connection;
 use App\LinkPreview\PdoLinkPreviewRepository;
 
 $root = dirname(__DIR__);
-require $root . '/vendor/autoload.php';
-if (is_file($root . '/.env')) Dotenv\Dotenv::createImmutable($root)->safeLoad();
+require $root . '/bootstrap.php';
 
 $config = Config::fromEnvironment();
 $repository = new PdoLinkPreviewRepository(Connection::fromConfig($config)->pdo());

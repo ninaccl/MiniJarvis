@@ -99,24 +99,36 @@ final class InventoryServiceTest extends TestCase
         $batch = $this->service->create($this->context(), ['ingredient_name' => 'Egg', 'quantity' => 2, 'unit_code' => 'piece']);
         $this->service->move($this->context(), $batch['id'], ['operation' => 'consume', 'quantity' => 2, 'unit_code' => 'piece']);
 
-        self::assertCount(1, $this->service->list($this->context(), '', 'all'));
-        self::assertSame([], $this->service->list($this->context(), '', 'active'));
-        self::assertSame('inactive', $this->service->list($this->context(), '', 'all')[0]['status']);
+        self::assertCount(1, $this->service->listItems($this->context(), '', 'all'));
+        self::assertSame([], $this->service->listItems($this->context(), '', 'active'));
+        self::assertSame('inactive', $this->service->listItems($this->context(), '', 'all')[0]['status']);
         self::assertCount(2, $this->service->movements($this->context(), 1, 20)['items']);
     }
 
-    public function testExpiryFiltersUseInclusiveShanghaiThreeDayBoundary(): void
+    public function testExpiryFiltersUseConfigurableInclusiveShanghaiBoundary(): void
     {
         foreach ([
             ['Expired', '2026-09-12'], ['Today', '2026-09-13'], ['Third day', '2026-09-16'],
-            ['Fourth day', '2026-09-17'], ['No date', null],
+            ['Fifteenth day', '2026-09-28'], ['Sixteenth day', '2026-09-29'], ['No date', null],
         ] as [$name, $date]) {
             $this->service->create($this->context(), ['ingredient_name' => $name, 'quantity' => 1, 'unit_code' => 'piece', 'expiry_date' => $date]);
         }
 
-        self::assertSame(['Today', 'Third day'], array_column($this->service->list($this->context(), '', 'expiring'), 'ingredient_name'));
-        self::assertSame(['Expired'], array_column($this->service->list($this->context(), '', 'expired'), 'ingredient_name'));
-        self::assertSame(['Today', 'Third day', 'Fourth day', 'No date'], array_column($this->service->list($this->context(), '', 'active'), 'ingredient_name'));
+        self::assertSame(['Today', 'Third day', 'Fifteenth day'], array_column($this->service->listItems($this->context(), '', 'expiring'), 'ingredient_name'));
+        self::assertSame(['Today', 'Third day'], array_column($this->service->listItems($this->context(), '', 'expiring', 3), 'ingredient_name'));
+        self::assertSame(['Expired'], array_column($this->service->listItems($this->context(), '', 'expired'), 'ingredient_name'));
+        self::assertSame(['Today', 'Third day', 'Fifteenth day', 'Sixteenth day', 'No date'], array_column($this->service->listItems($this->context(), '', 'active'), 'ingredient_name'));
+    }
+
+    public function testDeletingBatchHidesItFromInventoryAndMatchingButKeepsMovementHistory(): void
+    {
+        $batch = $this->service->create($this->context(), ['ingredient_name' => 'Milk', 'quantity' => 1, 'unit_code' => 'l']);
+        $this->assertApiError(fn () => $this->service->delete($this->context(20, 2), $batch['id']), 'INVENTORY_BATCH_NOT_FOUND', 404);
+        $this->service->delete($this->context(), $batch['id']);
+        self::assertSame([], $this->service->listItems($this->context()));
+        self::assertSame([], $this->inventory->availableBatches(1, '2026-09-13'));
+        self::assertCount(1, $this->service->movements($this->context())['items']);
+        $this->assertApiError(fn () => $this->service->move($this->context(), $batch['id'], ['operation' => 'add', 'quantity' => 1, 'unit_code' => 'l']), 'INVENTORY_BATCH_NOT_FOUND', 404);
     }
 
     public function testPatchOnlyChangesExpiryAndNoteAndOtherHouseholdsCannotReadOrMutateBatch(): void
@@ -125,7 +137,7 @@ final class InventoryServiceTest extends TestCase
         $updated = $this->service->update($this->context(), $batch['id'], ['expiry_date' => '2026-09-16', 'note' => 'opened']);
         self::assertSame('2026-09-16', $updated['expiry_date']);
         self::assertSame('opened', $updated['note']);
-        self::assertSame([], $this->service->list($this->context(20, 2), '', 'all'));
+        self::assertSame([], $this->service->listItems($this->context(20, 2), '', 'all'));
         $this->assertApiError(fn () => $this->service->update($this->context(20, 2), $batch['id'], ['note' => 'leak']), 'INVENTORY_BATCH_NOT_FOUND', 404);
         $this->assertApiError(fn () => $this->service->move($this->context(20, 2), $batch['id'], ['operation' => 'add', 'quantity' => 1, 'unit_code' => 'pack']), 'INVENTORY_BATCH_NOT_FOUND', 404);
     }

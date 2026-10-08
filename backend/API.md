@@ -1,5 +1,7 @@
 # 小程序 REST 合约
 
+家庭资源请求用 `X-Household-Id: <id>` 指定当前家庭，服务端验证用户属于该家庭。不传时默认选择用户 ID 最小的家庭以兼容旧客户端。`GET /households` 不需要指定家庭。
+
 所有路径前缀 `/api/v1`。除 health 和 auth 外均用 `Authorization: Bearer <access_token>`；家庭资源由服务端验证成员关系。成功为 `{success:true,data:...}`，列表可能另有 `meta:{page,page_size,total,total_pages}`；失败为 `{success:false,error:{code,message,fields?}}`。当前前端客户端返回 data；每页取 20 条，以不足 20 条判定结束，整页末尾允许再请求一次空页。
 
 数值数量以最多四位小数字符串传递，必须为正且适配 DECIMAL(14,4)。单位代码：g、kg、ml、l、piece、pack、box、bunch、tbsp、tsp。日期为 `YYYY-MM-DD`（北京时间），时间点传 ISO-8601 并带 Z 或时区，响应时间为 UTC。客户端仅消费 REST，不导入 PHP 或数据库代码。
@@ -8,9 +10,12 @@
 | --- | --- | --- |
 | GET /health | 无 | `{status:'ok'}` |
 | POST /auth/wechat | `{code,nickname?,avatar_url?}` | `{access_token,user,...}` |
+| GET /households | 无 | `{households:[{id,name,owner_user_id,role}]}`，当前用户的全部家庭 |
 | POST /households | `{name}` | 家庭及一次性明文 invite_code |
 | POST /households/join | `{invite_code}` | 加入结果 |
 | GET /households/current | 无 | `{household:{id,name,role,...},members:[{user_id,nickname,role,...}]}` |
+| DELETE /households/current/membership | 无 | `{left:true}`，普通成员退出当前家庭 |
+| DELETE /households/current | 无 | `{dissolved:true}`，仅创建者；永久删除家庭及数据 |
 | POST /households/invite/reset | `{}` | 新 invite_code，仅 owner |
 | DELETE /households/members/{userId} | 无 | 删除结果，仅 owner，可移除非 owner |
 | GET /categories | 无 | `[{id,name}]` |
@@ -23,9 +28,10 @@
 | POST /link-previews | `{url}` | `{available,title?,image_url?,token?,normalized_url?,reason?}` |
 | GET /link-previews/{token}/image | Bearer，仅创建者，24h有效 | 图片字节，不是 JSON |
 | POST /link-previews/{token}/adopt | `{}` | `{cover_url}`，只能采用一次 |
-| GET /inventory | q、status=all/active/expiring/expired | 批次数组 |
+| GET /inventory | q、status=all/active/expiring/expired、expiry_days=0–365（默认 15） | 批次数组 |
 | POST /inventory/batches | `{ingredient_name,quantity,unit_code,expiry_date?,note?}` | 批次；可用 ingredient_id 替代 ingredient_name |
 | PATCH /inventory/batches/{id} | `{expiry_date?,note?}`，null 清除 | 更新后的批次 |
+| DELETE /inventory/batches/{id} | 无 | 隐藏批次，保留历史流水 |
 | POST /inventory/batches/{id}/movements | `{operation:'add'/'consume'/'set',quantity,unit_code,note?}` | 更新后的批次 |
 | GET /inventory/movements | page、page_size | 流水数组，含 operation/base_delta/base_unit_code/ingredient_name/batch_id/occurred_at（UTC ISO-8601） |
 | GET /recipes/matches | count=1..10，默认2 | 推荐数组：recipe、score、fully_matched、matched_ingredients、missing_ingredients |
@@ -44,8 +50,8 @@
 | GET /tasks/{id} | 无 | 任务和 children |
 | PATCH /tasks/{id} | title、parent_id、assignee_user_id、due_at、status 的子集 | 更新后的任务 |
 | DELETE /tasks/{id} | 无 | null；删除父任务会级联删除子任务 |
-| GET /notifications/preferences | 无 | `{task_due,inventory_expiry}` |
-| PATCH /notifications/preferences | 偏好的布尔值子集 | 更新后偏好 |
+| GET /notifications/preferences | 无 | `{task_due,inventory_expiry,expiry_days}`，天数默认 15 |
+| PATCH /notifications/preferences | 偏好的布尔值子集或 `expiry_days`（0–365） | 更新后偏好 |
 | POST /notifications/subscription-grants | `{template_type:'task_due'/'inventory_expiry',result:'accept'/'reject'}` | 授权记录结果 |
 
 完整菜谱写入示意（字段值为合约示例，不是页面内置数据）：
